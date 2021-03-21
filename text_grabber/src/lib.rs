@@ -3,15 +3,15 @@ use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::str::from_utf8;
 
-trait TextGrabber {
+pub trait TextGrabber {
     fn get_until_delimiter(&mut self) -> Option<String>;
 
     fn get_next_chunk(&mut self) -> Option<&String>;
     fn get_prev_chunk(&mut self) -> Option<&String>;
-    fn get_chunk(&mut self, chunk_num: usize) -> Option<&String>;
+    fn get_chunk(&self, chunk_num: usize) -> Option<&String>;
 }
 
-struct EnglishParagraphRetriever {
+pub struct EnglishParagraphRetriever {
     text_file: File,
     delimiters: HashSet<String>,
 
@@ -21,7 +21,7 @@ struct EnglishParagraphRetriever {
 
 impl TextGrabber for EnglishParagraphRetriever {
     fn get_until_delimiter(&mut self) -> Option<String> {
-        let mut found_line = String::new();
+        let mut found_bytes: Vec<u8> = Vec::new();
 
         let mut found_byte: [u8; 1] = [0; 1];
         while let Ok(n) = self.text_file.read(&mut found_byte) {
@@ -29,19 +29,19 @@ impl TextGrabber for EnglishParagraphRetriever {
                 break;
             }
 
-            let found_char = from_utf8(&found_byte).ok()?;
-            found_line.push_str(found_char);
-
-            if self.delimiters.contains(found_char) {
-                break;
+            found_bytes.push(found_byte[0]);
+            if let Ok(found_char) = from_utf8(&found_byte) {
+                if self.delimiters.contains(found_char) {
+                    break;
+                }
             }
         }
 
-        if found_line.len() == 0 {
+        if found_bytes.len() == 0 {
             return None;
         }
 
-        Some(found_line)
+        Some(String::from_utf8(found_bytes).expect("Invalid UTF-8 given."))
     }
 
     fn get_next_chunk(&mut self) -> Option<&String> {
@@ -62,7 +62,7 @@ impl TextGrabber for EnglishParagraphRetriever {
         self.paragraphs.get(self.current_paragraph_num)
     }
 
-    fn get_chunk(&mut self, chunk_num: usize) -> Option<&String> {
+    fn get_chunk(&self, chunk_num: usize) -> Option<&String> {
         self.paragraphs.get(chunk_num)
     }
 }
@@ -95,7 +95,7 @@ impl EnglishParagraphRetriever {
         }
     }
 
-    fn load_paragraphs(&mut self) -> u32 {
+    pub fn load_paragraphs(&mut self) -> u32 {
         let mut current_paragraph: String = String::new();
         let mut num_paragraphs = 0;
 

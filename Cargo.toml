@@ -8,9 +8,14 @@ edition = "2018"
 
 [workspace]
 members = [
-    "TextGrabber",
-    "VideoProcessor",
-    "AudioProcessor"
+    "text_grabber",
+    "video_processor",
+    "audio_processor"
 ]
 
 [dependencies]
+gtk = "^0.9.0"
+relm = "^0.21.0"
+relm-derive = "^0.21.0"
+
+text_grabber = { path = "text_grabber" }
