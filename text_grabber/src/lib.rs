@@ -9,7 +9,7 @@ pub trait TextGrabber {
 
     fn get_next_chunk(&mut self) -> Option<&String>;
     fn get_prev_chunk(&mut self) -> Option<&String>;
-    fn get_chunk(&self, chunk_num: usize) -> Option<&String>;
+    fn get_chunk(&mut self, chunk_num: usize) -> Option<&String>;
 }
 
 pub struct EnglishParagraphRetriever {
@@ -69,7 +69,12 @@ impl TextGrabber for EnglishParagraphRetriever {
         self.paragraphs.get(self.current_paragraph_num)
     }
 
-    fn get_chunk(&self, chunk_num: usize) -> Option<&String> {
+    fn get_chunk(&mut self, chunk_num: usize) -> Option<&String> {
+        if chunk_num < 0 || chunk_num >= self.paragraphs.len() {
+            return None;
+        }
+
+        self.current_paragraph_num = chunk_num;
         self.paragraphs.get(chunk_num)
     }
 }

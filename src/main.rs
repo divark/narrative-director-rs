@@ -1,5 +1,8 @@
 use gtk::prelude::*;
-use gtk::{Builder, Button, Inhibit, Label, TextView, Window, MenuItem, FileChooser, FileChooserDialogBuilder, FileChooserAction, FileChooserDialog, ResponseType};
+use gtk::{
+    Builder, Button, FileChooser, FileChooserAction, FileChooserDialog, FileChooserDialogBuilder,
+    Inhibit, Label, MenuItem, ResponseType, TextView, Window,
+};
 use relm::{connect, Relm, Update, Widget};
 use relm_derive::Msg;
 
@@ -91,30 +94,43 @@ impl Update for Win {
                         .expect("Couldn't get text viewer")
                         .set_text(paragraph.as_str());
                 }
-            },
+            }
             Msg::LoadFile => {
-                let file_chooser_dialog = FileChooserDialogBuilder::new()
-                    .action(FileChooserAction::Open)
-                    .title("Open File")
-                    .build();
+                let file_chooser = gtk::FileChooserDialog::new(
+                    Some("Open File"),
+                    Some(&self.widgets.window),
+                    gtk::FileChooserAction::Open,
+                );
+                file_chooser.add_buttons(&[
+                    ("Open", gtk::ResponseType::Ok),
+                    ("Cancel", gtk::ResponseType::Cancel),
+                ]);
 
-                file_chooser_dialog.run();
+                match file_chooser.run() {
+                    ResponseType::Ok => {
+                        let filename = file_chooser.get_filename().expect("Couldn't get filename");
+                        let file = File::open(&filename).expect("Couldn't open file");
 
-                let loaded_file_result = File::open(file_chooser_dialog.get_preview_filename().unwrap().as_path());
-                if let Ok(loaded_file) = loaded_file_result {
-                    self.model.chunk_retriever = EnglishParagraphRetriever::new();
-                    let num_paragraphs = self.model.chunk_retriever.load_chunks(loaded_file);
+                        self.model.chunk_retriever = EnglishParagraphRetriever::new();
+                        let num_paragraphs = self.model.chunk_retriever.load_chunks(file);
 
-                    if num_paragraphs == 0 {
-                        return;
+                        if num_paragraphs == 0 {
+                            return;
+                        }
+
+                        self.model.chunk_total = num_paragraphs;
+                        progress_label.set_text(format!("{}/{}", 1, num_paragraphs).as_str());
+
+                        text_viewer
+                            .get_buffer()
+                            .expect("Couldn't get text viewer in load")
+                            .set_text(self.model.chunk_retriever.get_chunk(0).unwrap());
+
+                        file_chooser.close();
                     }
-
-                    self.model.chunk_total = num_paragraphs;
-                    progress_label.set_text(format!("{}/{}", 1, num_paragraphs).as_str());
-
-                    text_viewer.get_buffer().expect("Couldn't get text viewer in load").set_text(self.model.chunk_retriever.get_chunk(0).unwrap());
+                    _ => file_chooser.close(),
                 }
-            },
+            }
             Msg::Quit => gtk::main_quit(),
         }
     }
@@ -163,7 +179,7 @@ impl Widget for Win {
                 next_chunk_button: next_button,
                 window,
                 open_menu_item,
-                quit_menu_item
+                quit_menu_item,
             },
         }
     }
