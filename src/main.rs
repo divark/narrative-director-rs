@@ -1,20 +1,26 @@
 use gtk::prelude::*;
-use gtk::{
-    Builder, Button, FileChooser, FileChooserAction, FileChooserDialog, FileChooserDialogBuilder,
-    Inhibit, Label, MenuItem, ResponseType, TextView, Window,
-};
+use gtk::{Builder, Button, Inhibit, Label, MenuItem, ResponseType, TextView, Window};
 use relm::{connect, Relm, Update, Widget};
 use relm_derive::Msg;
 
 use std::fs::File;
 use text_grabber::{EnglishParagraphRetriever, TextGrabber};
 
+/// Holds the variables necessary to navigate chunks
+/// in some UTF-8 text file.
+///
+/// Just like in the software design pattern
+/// [Model-view-controller](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93controller),
+/// this model influences the logical flow of the
+/// application, depending on its current state.
 struct Model {
     chunk_retriever: EnglishParagraphRetriever,
     chunk_number: u32,
     chunk_total: u32,
 }
 
+/// Represents User Events that could take place
+/// in the GUI.
 #[derive(Msg)]
 enum Msg {
     Next,
@@ -23,6 +29,11 @@ enum Msg {
     Quit,
 }
 
+/// Keeps track of the Graphical User Interface
+/// elements in the application.
+///
+/// Widgets serve as both a means of viewing, like Labels and Viewers,
+/// as well as hooks that spawn User Events, such as Buttons.
 #[derive(Clone)]
 struct Widgets {
     // Main Window Widgets
@@ -36,18 +47,25 @@ struct Widgets {
     quit_menu_item: MenuItem,
 }
 
+/// Abstracts the whole application, merging
+/// the Model and references to the View and Controller
+/// widgets.
 struct Win {
     model: Model,
     widgets: Widgets,
 }
 
+/// Implements the Event Handler of all User Actions for
+/// this application.
+///
+/// In essence, this is an [Event loop.](https://en.wikipedia.org/wiki/Event_loop)
 impl Update for Win {
     type Model = Model;
     type ModelParam = ();
     type Msg = Msg;
 
     fn model(_: &Relm<Self>, _: ()) -> Model {
-        let mut chunk_retriever = EnglishParagraphRetriever::new();
+        let chunk_retriever = EnglishParagraphRetriever::new();
 
         Model {
             chunk_retriever,
@@ -56,13 +74,19 @@ impl Update for Win {
         }
     }
 
+    // This is where all User Events are parsed, influencing how
+    // the Model and View changes.
     fn update(&mut self, event: Msg) {
         let progress_label = &self.widgets.chunk_progress_label;
         let text_viewer = &self.widgets.chunk_viewer;
 
         match event {
             Msg::Next => {
-                if let Some(paragraph) = self.model.chunk_retriever.get_next_chunk() {
+                if let Some(paragraph) = self
+                    .model
+                    .chunk_retriever
+                    .get_chunk((self.model.chunk_number + 1) as usize)
+                {
                     self.model.chunk_number += 1;
                     progress_label.set_text(
                         format!(
@@ -79,7 +103,15 @@ impl Update for Win {
                 }
             }
             Msg::Previous => {
-                if let Some(paragraph) = self.model.chunk_retriever.get_prev_chunk() {
+                if self.model.chunk_number <= 0 {
+                    return;
+                }
+
+                if let Some(paragraph) = self
+                    .model
+                    .chunk_retriever
+                    .get_chunk((self.model.chunk_number - 1) as usize)
+                {
                     self.model.chunk_number -= 1;
                     progress_label.set_text(
                         format!(
@@ -118,6 +150,7 @@ impl Update for Win {
                             return;
                         }
 
+                        self.model.chunk_number = 0;
                         self.model.chunk_total = num_paragraphs;
                         progress_label.set_text(format!("{}/{}", 1, num_paragraphs).as_str());
 
@@ -136,6 +169,8 @@ impl Update for Win {
     }
 }
 
+/// Implements the Viewer elements of the application, connecting
+/// behaviors to each that invoke Events accordingly.
 impl Widget for Win {
     type Root = Window;
 
@@ -185,6 +220,7 @@ impl Widget for Win {
     }
 }
 
+/// Spawns the application with a Graphical User Interface.
 fn main() {
     Win::run(()).unwrap();
 }
