@@ -1,3 +1,5 @@
+mod text_grabber;
+
 use gtk::prelude::*;
 use gtk::{Builder, Button, Inhibit, Label, MenuItem, ResponseType, TextView, Window};
 use relm::{connect, Relm, Update, Widget};

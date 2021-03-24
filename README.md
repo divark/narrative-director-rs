@@ -32,7 +32,8 @@ addition to having an excuse to learn about [Rust](https://www.rust-lang.org/) a
 2. Download [GTK+3](https://www.gtk.org/docs/installations/).
 3. Clone the repository.
 4. In a terminal, navigate to the repository.
-5. For each module (audio/video_processor, text_grabber), run `cargo test` to ensure all features are working as intended.
+5. Run `cargo test` to ensure all features are working as intended.
+6. Run `cargo run` to see the current state of the application.
 ---
 ### License
 Narrative Director is distributed under the GPLv3 License, which can be viewed [here.](COPYING)

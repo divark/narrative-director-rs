@@ -33,10 +33,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "audio_processor"
-version = "0.1.0"
-
-[[package]]
 name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -442,7 +438,7 @@ dependencies = [
  "gtk",
  "relm",
  "relm-derive",
- "text_grabber",
+ "tempfile",
 ]
 
 [[package]]
@@ -752,13 +748,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "text_grabber"
-version = "0.1.0"
-dependencies = [
- "tempfile",
-]
-
-[[package]]
 name = "thiserror"
 version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -816,10 +805,6 @@ name = "version_check"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5fecdca9a5291cc2b8dcf7dc02453fee791a280f3743cb0905f8822ae463b3fe"
-
-[[package]]
-name = "video_processor"
-version = "0.1.0"
 
 [[package]]
 name = "wasi"
