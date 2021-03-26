@@ -1,7 +1,10 @@
 mod text_grabber;
 
 use gtk::prelude::*;
-use gtk::{Builder, Button, Inhibit, Label, MenuItem, ResponseType, TextView, Window};
+use gtk::{
+    Builder, Button, Dialog, DialogFlags, Inhibit, Label, MenuItem, ResponseType, SpinButton,
+    TextView, Window,
+};
 use relm::{connect, Relm, Update, Widget};
 use relm_derive::Msg;
 
@@ -27,6 +30,7 @@ struct Model {
 enum Msg {
     Next,
     Previous,
+    JumpTo,
     LoadFile,
     Quit,
 }
@@ -46,6 +50,7 @@ struct Widgets {
     window: Window,
     // Menu Widgets
     open_menu_item: MenuItem,
+    goto_menu_item: MenuItem,
     quit_menu_item: MenuItem,
 }
 
@@ -129,6 +134,55 @@ impl Update for Win {
                         .set_text(paragraph.as_str());
                 }
             }
+            Msg::JumpTo => {
+                if self.model.chunk_total == 0 {
+                    return;
+                }
+
+                let goto_dialog = Dialog::with_buttons(
+                    Some("Select the paragraph number."),
+                    Some(&self.widgets.window),
+                    DialogFlags::MODAL,
+                    &[("Ok", ResponseType::Ok), ("Cancel", ResponseType::Cancel)],
+                );
+                goto_dialog.set_default_response(ResponseType::Ok);
+
+                let content_area = goto_dialog.get_content_area();
+
+                let goto_spin_button =
+                    SpinButton::with_range(1.0, self.model.chunk_total as f64, 1.0);
+                content_area.add(&goto_spin_button);
+
+                goto_dialog.show_all();
+
+                match goto_dialog.run() {
+                    ResponseType::Ok => {
+                        let goto_paragraph_num = goto_spin_button.get_value_as_int() - 1;
+                        if let Some(paragraph) = self
+                            .model
+                            .chunk_retriever
+                            .get_chunk(goto_paragraph_num as usize)
+                        {
+                            self.model.chunk_number = goto_paragraph_num as u32;
+                            progress_label.set_text(
+                                format!(
+                                    "{}/{}",
+                                    &self.model.chunk_number + 1,
+                                    &self.model.chunk_total
+                                )
+                                .as_str(),
+                            );
+                            text_viewer
+                                .get_buffer()
+                                .expect("Couldn't get text viewer")
+                                .set_text(paragraph.as_str());
+
+                            goto_dialog.close();
+                        }
+                    }
+                    _ => goto_dialog.close(),
+                }
+            }
             Msg::LoadFile => {
                 let file_chooser = gtk::FileChooserDialog::new(
                     Some("Open File"),
@@ -193,6 +247,7 @@ impl Widget for Win {
         let next_button: Button = builder.get_object("next_chunk_btn").unwrap();
 
         let open_menu_item: MenuItem = builder.get_object("open_menu").unwrap();
+        let goto_menu_item: MenuItem = builder.get_object("goto_menu").unwrap();
         let quit_menu_item: MenuItem = builder.get_object("close_menu").unwrap();
 
         connect!(relm, prev_button, connect_clicked(_), Msg::Previous);
@@ -205,6 +260,7 @@ impl Widget for Win {
         );
 
         connect!(relm, open_menu_item, connect_activate(_), Msg::LoadFile);
+        connect!(relm, goto_menu_item, connect_activate(_), Msg::JumpTo);
         connect!(quit_menu_item, connect_activate(_), relm, Msg::Quit);
 
         Win {
@@ -216,6 +272,7 @@ impl Widget for Win {
                 next_chunk_button: next_button,
                 window,
                 open_menu_item,
+                goto_menu_item,
                 quit_menu_item,
             },
         }
