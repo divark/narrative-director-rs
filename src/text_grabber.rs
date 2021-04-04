@@ -8,6 +8,7 @@ pub trait TextGrabber {
     fn load_chunks(&mut self, text_file: File) -> u32;
 
     fn get_chunk(&self, chunk_num: usize) -> Option<&String>;
+    fn len(&self) -> usize;
 }
 
 pub struct EnglishParagraphRetriever {
@@ -68,6 +69,10 @@ impl TextGrabber for EnglishParagraphRetriever {
         }
 
         self.paragraphs.get(chunk_num)
+    }
+
+    fn len(&self) -> usize {
+        self.paragraphs.len()
     }
 }
 

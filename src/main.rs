@@ -54,6 +54,33 @@ struct Widgets {
     quit_menu_item: MenuItem,
 }
 
+
+struct ChunkViewingUi<'a> {
+    progress_label: &'a Label,
+    chunk_viewer: &'a TextView,
+}
+
+// Populates the UI with the specified chunk.
+fn show_chunk(
+    chunk_num: u32,
+    chunk_getter: &EnglishParagraphRetriever,
+    ui: ChunkViewingUi,
+) -> Result<(), ()> {
+    if let Some(paragraph) = chunk_getter.get_chunk(chunk_num as usize) {
+        ui.progress_label
+            .set_text(format!("{}/{}", chunk_num + 1, chunk_getter.len()).as_str());
+
+        ui.chunk_viewer
+            .get_buffer()
+            .expect("Couldn't get text viewer")
+            .set_text(paragraph.as_str());
+
+        return Ok(());
+    }
+
+    Err(())
+}
+
 /// Abstracts the whole application, merging
 /// the Model and references to the View and Controller
 /// widgets.
@@ -87,26 +114,19 @@ impl Update for Win {
         let progress_label = &self.widgets.chunk_progress_label;
         let text_viewer = &self.widgets.chunk_viewer;
 
+        let paragraph_ui = ChunkViewingUi {
+            progress_label,
+            chunk_viewer: text_viewer,
+        };
+
         match event {
             Msg::Next => {
-                if let Some(paragraph) = self
-                    .model
-                    .chunk_retriever
-                    .get_chunk((self.model.chunk_number + 1) as usize)
-                {
+                if let Ok(_) = show_chunk(
+                    self.model.chunk_number + 1,
+                    &self.model.chunk_retriever,
+                    paragraph_ui,
+                ) {
                     self.model.chunk_number += 1;
-                    progress_label.set_text(
-                        format!(
-                            "{}/{}",
-                            &self.model.chunk_number + 1,
-                            &self.model.chunk_total
-                        )
-                        .as_str(),
-                    );
-                    text_viewer
-                        .get_buffer()
-                        .expect("Couldn't get text viewer")
-                        .set_text(paragraph.as_str());
                 }
             }
             Msg::Previous => {
@@ -114,24 +134,12 @@ impl Update for Win {
                     return;
                 }
 
-                if let Some(paragraph) = self
-                    .model
-                    .chunk_retriever
-                    .get_chunk((self.model.chunk_number - 1) as usize)
-                {
+                if let Ok(_) = show_chunk(
+                    self.model.chunk_number - 1,
+                    &self.model.chunk_retriever,
+                    paragraph_ui,
+                ) {
                     self.model.chunk_number -= 1;
-                    progress_label.set_text(
-                        format!(
-                            "{}/{}",
-                            &self.model.chunk_number + 1,
-                            &self.model.chunk_total
-                        )
-                        .as_str(),
-                    );
-                    text_viewer
-                        .get_buffer()
-                        .expect("Couldn't get text viewer")
-                        .set_text(paragraph.as_str());
                 }
             }
             Msg::JumpTo => {
@@ -157,28 +165,16 @@ impl Update for Win {
 
                 match goto_dialog.run() {
                     ResponseType::Ok => {
-                        let goto_paragraph_num = goto_spin_button.get_value_as_int() - 1;
-                        if let Some(paragraph) = self
-                            .model
-                            .chunk_retriever
-                            .get_chunk(goto_paragraph_num as usize)
-                        {
-                            self.model.chunk_number = goto_paragraph_num as u32;
-                            progress_label.set_text(
-                                format!(
-                                    "{}/{}",
-                                    &self.model.chunk_number + 1,
-                                    &self.model.chunk_total
-                                )
-                                .as_str(),
-                            );
-                            text_viewer
-                                .get_buffer()
-                                .expect("Couldn't get text viewer")
-                                .set_text(paragraph.as_str());
-
-                            goto_dialog.close();
+                        let goto_paragraph_num = (goto_spin_button.get_value_as_int() - 1) as u32;
+                        if let Ok(_) = show_chunk(
+                            goto_paragraph_num,
+                            &self.model.chunk_retriever,
+                            paragraph_ui,
+                        ) {
+                            self.model.chunk_number = goto_paragraph_num;
                         }
+
+                        goto_dialog.close();
                     }
                     _ => goto_dialog.close(),
                 }
@@ -208,12 +204,7 @@ impl Update for Win {
 
                         self.model.chunk_number = 0;
                         self.model.chunk_total = num_paragraphs;
-                        progress_label.set_text(format!("{}/{}", 1, num_paragraphs).as_str());
-
-                        text_viewer
-                            .get_buffer()
-                            .expect("Couldn't get text viewer in load")
-                            .set_text(self.model.chunk_retriever.get_chunk(0).unwrap());
+                        show_chunk(0, &self.model.chunk_retriever, paragraph_ui).unwrap();
 
                         file_chooser.close();
                     }
