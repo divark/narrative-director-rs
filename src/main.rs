@@ -1,3 +1,4 @@
+mod audio_processor;
 mod text_grabber;
 
 use gtk::prelude::*;
@@ -53,7 +54,6 @@ struct Widgets {
     goto_menu_item: MenuItem,
     quit_menu_item: MenuItem,
 }
-
 
 struct ChunkViewingUi<'a> {
     progress_label: &'a Label,
@@ -121,24 +121,28 @@ impl Update for Win {
 
         match event {
             Msg::Next => {
-                if let Ok(_) = show_chunk(
+                if show_chunk(
                     self.model.chunk_number + 1,
                     &self.model.chunk_retriever,
                     paragraph_ui,
-                ) {
+                )
+                .is_ok()
+                {
                     self.model.chunk_number += 1;
                 }
             }
             Msg::Previous => {
-                if self.model.chunk_number <= 0 {
+                if self.model.chunk_number == 0 {
                     return;
                 }
 
-                if let Ok(_) = show_chunk(
+                if show_chunk(
                     self.model.chunk_number - 1,
                     &self.model.chunk_retriever,
                     paragraph_ui,
-                ) {
+                )
+                .is_ok()
+                {
                     self.model.chunk_number -= 1;
                 }
             }
@@ -166,11 +170,13 @@ impl Update for Win {
                 match goto_dialog.run() {
                     ResponseType::Ok => {
                         let goto_paragraph_num = (goto_spin_button.get_value_as_int() - 1) as u32;
-                        if let Ok(_) = show_chunk(
+                        if show_chunk(
                             goto_paragraph_num,
                             &self.model.chunk_retriever,
                             paragraph_ui,
-                        ) {
+                        )
+                        .is_ok()
+                        {
                             self.model.chunk_number = goto_paragraph_num;
                         }
 
