@@ -2,10 +2,7 @@ mod audio_processor;
 mod text_grabber;
 
 use gtk::prelude::*;
-use gtk::{
-    Builder, Button, Dialog, DialogFlags, Inhibit, Label, MenuItem, ResponseType, SpinButton,
-    TextView, Window,
-};
+use gtk::{Builder, Button, Dialog, DialogFlags, Inhibit, Label, MenuItem, ResponseType, SpinButton, TextView, Window, FileFilter};
 use relm::{connect, Relm, Update, Widget};
 use relm_derive::Msg;
 
@@ -191,10 +188,17 @@ impl Update for Win {
                     Some(&self.widgets.window),
                     gtk::FileChooserAction::Open,
                 );
+
                 file_chooser.add_buttons(&[
                     ("Open", gtk::ResponseType::Ok),
                     ("Cancel", gtk::ResponseType::Cancel),
                 ]);
+
+                let text_file_filter = FileFilter::new();
+                text_file_filter.set_name(Some("UTF-8 Text Files"));
+                text_file_filter.add_pattern("*.txt");
+
+                file_chooser.add_filter(&text_file_filter);
 
                 match file_chooser.run() {
                     ResponseType::Ok => {
