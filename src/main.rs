@@ -2,7 +2,10 @@ mod audio_processor;
 mod text_grabber;
 
 use gtk::prelude::*;
-use gtk::{Builder, Button, Dialog, DialogFlags, Inhibit, Label, MenuItem, ResponseType, SpinButton, TextView, Window, FileFilter};
+use gtk::{
+    Builder, Button, Dialog, DialogFlags, FileFilter, Inhibit, Label, MenuItem, ResponseType,
+    SpinButton, TextView, Window,
+};
 use relm::{connect, Relm, Update, Widget};
 use relm_derive::Msg;
 
