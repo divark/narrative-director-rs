@@ -111,7 +111,7 @@ impl CpalAudioRecorder {
         }
     }
 
-    fn stop_recording(&mut self) {
+    fn stop(&mut self) {
         self.io_stream = None;
     }
 }
@@ -132,7 +132,7 @@ mod tests {
 
         assert!(recorder.record(file_to_record.clone()).is_ok());
         sleep(Duration::from_secs(time_to_wait_secs));
-        recorder.stop_recording();
+        recorder.stop();
 
         assert!(fs::metadata(file_to_record.as_str()).unwrap().is_file());
     }
@@ -147,7 +147,7 @@ mod tests {
         //First time
         assert!(recorder.record(file_to_record.clone()).is_ok());
         sleep(Duration::from_secs(time_to_wait_secs));
-        recorder.stop_recording();
+        recorder.stop();
 
         let first_created_time = fs::metadata(file_to_record.clone())
             .unwrap()
@@ -157,7 +157,7 @@ mod tests {
         //Second time
         assert!(recorder.record(file_to_record.clone()).is_ok());
         sleep(Duration::from_secs(time_to_wait_secs));
-        recorder.stop_recording();
+        recorder.stop();
 
         let modified_time = fs::metadata(file_to_record.clone())
             .unwrap()

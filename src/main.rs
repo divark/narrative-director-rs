@@ -239,7 +239,7 @@ impl Widget for Win {
     }
 
     fn view(relm: &Relm<Self>, model: Self::Model) -> Self {
-        let glade_src = include_str!("resources/ui/main-window.glade");
+        let glade_src = include_str!("ui/main-window.glade");
         let builder = Builder::from_string(glade_src);
 
         let window: Window = builder.get_object("window").unwrap();
