@@ -3,10 +3,8 @@ use cpal::{default_host, Device, PauseStreamError, PlayStreamError, Stream, Stre
 use hound::WavReader;
 
 pub struct CpalAudioPlayer {
-    input_file_name: String,
-
     output_device: Device,
-    output_stream: Stream,
+    output_stream: Option<Stream>,
     output_duration_secs: u32,
     output_paused_pos_sec: u32,
 }
@@ -37,24 +35,28 @@ fn output_stream_from(output_device: &Device, input_file_name: String) -> (Strea
 }
 
 impl CpalAudioPlayer {
-    pub fn new(input_file_name: String) -> CpalAudioPlayer {
+    pub fn new() -> CpalAudioPlayer {
         let host = default_host();
         let output_device = host.default_output_device().unwrap();
-        let output_info = output_stream_from(&output_device, input_file_name.clone());
 
         CpalAudioPlayer {
-            input_file_name,
-
             output_device,
-            output_stream: output_info.0,
-            output_duration_secs: output_info.1,
+            output_stream: None,
+            output_duration_secs: 0,
             output_paused_pos_sec: 0,
         }
     }
 
     // Returns the number of seconds to play audio.
-    pub fn play(&self) -> Result<u32, PlayStreamError> {
-        let output_playing_status = self.output_stream.play();
+    pub fn play(&mut self, input_file_name: String) -> Result<u32, PlayStreamError> {
+        if self.output_stream.is_none() {
+            let (output_stream, duration) = output_stream_from(&self.output_device, input_file_name);
+
+            self.output_stream = Some(output_stream);
+            self.output_duration_secs = duration;
+        }
+
+        let output_playing_status = self.output_stream.as_ref().unwrap().play();
         if let Err(output_stream_error) = output_playing_status {
             return Err(output_stream_error);
         }
@@ -63,7 +65,11 @@ impl CpalAudioPlayer {
     }
 
     pub fn pause(&mut self, paused_loc_secs: u32) -> Result<(), PauseStreamError> {
-        let output_pausing_status = self.output_stream.pause();
+        if self.output_stream.is_none() {
+            return Ok(());
+        }
+
+        let output_pausing_status = self.output_stream.as_ref().unwrap().pause();
         if let Err(output_stream_error) = output_pausing_status {
             return Err(output_stream_error);
         }
@@ -75,8 +81,9 @@ impl CpalAudioPlayer {
 
     pub fn stop(&mut self) {
         self.output_paused_pos_sec = 0;
-        self.output_stream =
-            output_stream_from(&self.output_device, self.input_file_name.clone()).0;
+        self.output_duration_secs = 0;
+
+        self.output_stream = None;
     }
 }
 
@@ -90,10 +97,10 @@ mod tests {
 
     #[test]
     fn plays_wav_file() {
-        let audio_player = CpalAudioPlayer::new(String::from(AUDIO_FILE));
+        let mut audio_player = CpalAudioPlayer::new();
         let expected_duration_secs = 3;
 
-        let status = audio_player.play();
+        let status = audio_player.play(String::from(AUDIO_FILE));
         assert!(status.is_ok());
 
         let actual_duration_secs = status.unwrap();
@@ -104,10 +111,10 @@ mod tests {
 
     #[test]
     fn pauses_playing_wav_file() {
-        let mut audio_player = CpalAudioPlayer::new(String::from(AUDIO_FILE));
+        let mut audio_player = CpalAudioPlayer::new();
         let expected_duration_secs = 3;
 
-        let playing_status = audio_player.play();
+        let playing_status = audio_player.play(String::from(AUDIO_FILE));
         sleep(Duration::from_secs(1));
         assert!(playing_status.is_ok());
 
@@ -115,7 +122,7 @@ mod tests {
         sleep(Duration::from_secs(2));
         assert!(paused_status.is_ok());
 
-        let playing_status = audio_player.play();
+        let playing_status = audio_player.play(String::from(AUDIO_FILE));
         assert!(playing_status.is_ok());
 
         let actual_duration_secs = playing_status.unwrap();
@@ -126,9 +133,9 @@ mod tests {
 
     #[test]
     fn stops_playing_audio() {
-        let mut audio_player = CpalAudioPlayer::new(String::from(AUDIO_FILE));
+        let mut audio_player = CpalAudioPlayer::new();
 
-        let playing_status = audio_player.play();
+        let playing_status = audio_player.play(String::from(AUDIO_FILE));
         assert!(playing_status.is_ok());
 
         let duration_to_wait = playing_status.unwrap() - 2;
@@ -139,9 +146,9 @@ mod tests {
 
     #[test]
     fn can_play_again_after_stopped() {
-        let mut audio_player = CpalAudioPlayer::new(String::from(AUDIO_FILE));
+        let mut audio_player = CpalAudioPlayer::new();
 
-        let playing_status = audio_player.play();
+        let playing_status = audio_player.play(String::from(AUDIO_FILE));
         assert!(playing_status.is_ok());
 
         let duration_to_wait = playing_status.unwrap() - 2;
@@ -150,7 +157,7 @@ mod tests {
         audio_player.stop();
 
         // Now let's play again
-        let playing_status = audio_player.play();
+        let playing_status = audio_player.play(String::from(AUDIO_FILE));
         assert!(playing_status.is_ok());
 
         let duration_to_wait = playing_status.unwrap();
