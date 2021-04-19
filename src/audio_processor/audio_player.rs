@@ -14,10 +14,21 @@ fn err_fn(err: cpal::StreamError) {
 }
 
 // Returns a stream that'll broadcast the input file provided, as well as the expected duration.
-fn output_stream_from(output_device: &Device, input_file_name: String) -> (Stream, u32) {
+fn output_stream_from(
+    output_device: &Device,
+    starting_pos: u32,
+    input_file_name: String,
+) -> (Stream, u32) {
     let mut file_decoder = WavReader::open(input_file_name).unwrap();
     let num_samples = file_decoder.duration();
     let sample_rate = file_decoder.spec().sample_rate;
+    let samples_to_skip = starting_pos * sample_rate;
+
+    if samples_to_skip > num_samples {
+        panic!("output_stream_from error: Starting position exceeds file time.");
+    }
+
+    file_decoder.seek(samples_to_skip).unwrap();
 
     let output_config: StreamConfig = output_device.default_output_config().unwrap().into();
     let output_data_fn = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
@@ -50,7 +61,8 @@ impl CpalAudioPlayer {
     // Returns the number of seconds to play audio.
     pub fn play(&mut self, input_file_name: String) -> Result<u32, PlayStreamError> {
         if self.output_stream.is_none() {
-            let (output_stream, duration) = output_stream_from(&self.output_device, input_file_name);
+            let (output_stream, duration) =
+                output_stream_from(&self.output_device, 0, input_file_name);
 
             self.output_stream = Some(output_stream);
             self.output_duration_secs = duration;
@@ -62,6 +74,26 @@ impl CpalAudioPlayer {
         }
 
         Ok(self.output_duration_secs - self.output_paused_pos_sec)
+    }
+
+    pub fn play_at(
+        &mut self,
+        input_file_name: String,
+        audio_pos_secs: u32,
+    ) -> Result<u32, PlayStreamError> {
+        self.stop();
+
+        let (output_stream, duration) =
+            output_stream_from(&self.output_device, audio_pos_secs, input_file_name);
+        self.output_stream = Some(output_stream);
+        self.output_duration_secs = duration - audio_pos_secs;
+
+        let output_playing_status = self.output_stream.as_ref().unwrap().play();
+        if let Err(output_stream_error) = output_playing_status {
+            return Err(output_stream_error);
+        }
+
+        Ok(self.output_duration_secs)
     }
 
     pub fn pause(&mut self, paused_loc_secs: u32) -> Result<(), PauseStreamError> {
@@ -162,5 +194,19 @@ mod tests {
 
         let duration_to_wait = playing_status.unwrap();
         sleep(Duration::from_secs(duration_to_wait as u64));
+    }
+
+    #[test]
+    fn skips_to_2s_in() {
+        let mut audio_player = CpalAudioPlayer::new();
+        let expected_duration_to_wait = 1;
+
+        let playing_status = audio_player.play_at(String::from(AUDIO_FILE), 2);
+        assert!(playing_status.is_ok());
+
+        let actual_duration_to_wait = playing_status.unwrap();
+        assert_eq!(expected_duration_to_wait, actual_duration_to_wait);
+
+        sleep(Duration::from_secs(actual_duration_to_wait as u64));
     }
 }
