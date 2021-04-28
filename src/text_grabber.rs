@@ -77,13 +77,13 @@ impl TextGrabber for EnglishParagraphRetriever {
 }
 
 impl EnglishParagraphRetriever {
-    pub fn new() -> EnglishParagraphRetriever {
+    pub fn new() -> Self {
         let mut end_of_sentence_symbols = HashSet::new();
         end_of_sentence_symbols.insert(String::from("."));
         end_of_sentence_symbols.insert(String::from("?"));
         end_of_sentence_symbols.insert(String::from("!"));
 
-        EnglishParagraphRetriever {
+        Self {
             delimiters: end_of_sentence_symbols,
             paragraphs: Vec::new(),
         }

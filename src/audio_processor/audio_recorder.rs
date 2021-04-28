@@ -47,7 +47,7 @@ pub struct CpalAudioRecorder {
 }
 
 impl CpalAudioRecorder {
-    fn new() -> CpalAudioRecorder {
+    pub fn new() -> Self {
         let host = default_host();
         let device = host
             .default_input_device()
@@ -57,7 +57,7 @@ impl CpalAudioRecorder {
             .default_input_config()
             .expect("Could not get default input config from device");
 
-        CpalAudioRecorder {
+        Self {
             config,
             input_device: device,
 
@@ -65,7 +65,7 @@ impl CpalAudioRecorder {
         }
     }
 
-    fn record(&mut self, output_file_name: String) -> Result<(), String> {
+    pub fn record(&mut self, output_file_name: String) -> Result<(), String> {
         let spec = wav_spec_from_config(&self.config);
         let writer = WavWriter::create(output_file_name, spec).unwrap();
         let writer = Arc::new(Mutex::new(Some(writer)));
@@ -111,7 +111,7 @@ impl CpalAudioRecorder {
         }
     }
 
-    fn stop(&mut self) {
+    pub fn stop(&mut self) {
         self.io_stream = None;
     }
 }

@@ -11,6 +11,7 @@ use relm_derive::Msg;
 
 use std::fs::File;
 use text_grabber::{EnglishParagraphRetriever, TextGrabber};
+use crate::audio_processor::{ChunkAudioIO, ProcessingStatus, AudioProcessor, FileStatus};
 
 /// Holds the variables necessary to navigate chunks
 /// in some UTF-8 text file.
@@ -23,6 +24,9 @@ struct Model {
     chunk_retriever: EnglishParagraphRetriever,
     chunk_number: u32,
     chunk_total: u32,
+
+    audio_processor: ChunkAudioIO,
+    audio_status: ProcessingStatus,
 }
 
 /// Represents User Events that could take place
@@ -31,6 +35,10 @@ struct Model {
 enum Msg {
     Next,
     Previous,
+    Play,
+    Stop,
+    Record,
+
     JumpTo,
     LoadFile,
     Quit,
@@ -46,8 +54,13 @@ struct Widgets {
     // Main Window Widgets
     chunk_progress_label: Label,
     chunk_viewer: TextView,
+
     previous_chunk_button: Button,
     next_chunk_button: Button,
+    stop_button: Button,
+    record_button: Button,
+    play_button: Button,
+
     window: Window,
     // Menu Widgets
     open_menu_item: MenuItem,
@@ -60,7 +73,7 @@ struct ChunkViewingUi<'a> {
     chunk_viewer: &'a TextView,
 }
 
-// Populates the UI with the specified chunk.
+/// Populates the UI with the specified chunk.
 fn show_chunk(
     chunk_num: u32,
     chunk_getter: &EnglishParagraphRetriever,
@@ -79,6 +92,24 @@ fn show_chunk(
     }
 
     Err(())
+}
+
+/// Makes previous button active or inactive depending on the chunk number.
+fn change_prev_button_sensitivity(chunk_num: u32, prev_button: &Button) {
+    if chunk_num > 0 {
+        prev_button.set_sensitive(true);
+    } else {
+        prev_button.set_sensitive(false);
+    }
+}
+
+/// Makes next button active or inactive relative to the chunk number and the total.
+fn change_next_button_sensitivity(chunk_num: u32, chunk_total: u32, next_button: &Button) {
+    if chunk_num == chunk_total - 1 {
+        next_button.set_sensitive(false);
+    } else {
+        next_button.set_sensitive(true);
+    }
 }
 
 /// Abstracts the whole application, merging
@@ -105,6 +136,9 @@ impl Update for Win {
             chunk_retriever,
             chunk_number: 0,
             chunk_total: 0,
+
+            audio_processor: ChunkAudioIO::new(0),
+            audio_status: ProcessingStatus::Stopped,
         }
     }
 
@@ -129,6 +163,15 @@ impl Update for Win {
                 .is_ok()
                 {
                     self.model.chunk_number += 1;
+
+                    self.widgets.previous_chunk_button.set_sensitive(true);
+                    change_next_button_sensitivity(self.model.chunk_number, self.model.chunk_total, &self.widgets.next_chunk_button);
+
+                    if let Ok(file_status) = self.model.audio_processor.next() {
+                        if file_status == FileStatus::Exists {
+                            self.widgets.play_button.set_sensitive(true);
+                        }
+                    }
                 }
             }
             Msg::Previous => {
@@ -144,6 +187,15 @@ impl Update for Win {
                 .is_ok()
                 {
                     self.model.chunk_number -= 1;
+
+                    self.widgets.next_chunk_button.set_sensitive(true);
+                    change_prev_button_sensitivity(self.model.chunk_number, &self.widgets.previous_chunk_button);
+
+                    if let Ok(file_status) = self.model.audio_processor.prev() {
+                        if file_status == FileStatus::Exists {
+                            self.widgets.play_button.set_sensitive(true);
+                        }
+                    }
                 }
             }
             Msg::JumpTo => {
@@ -178,6 +230,15 @@ impl Update for Win {
                         .is_ok()
                         {
                             self.model.chunk_number = goto_paragraph_num;
+
+                            change_next_button_sensitivity(self.model.chunk_number, self.model.chunk_total, &self.widgets.next_chunk_button);
+                            change_prev_button_sensitivity(self.model.chunk_number, &self.widgets.previous_chunk_button);
+
+                            if let Ok(file_status) = self.model.audio_processor.go_to(self.model.chunk_number as usize) {
+                                if file_status == FileStatus::Exists {
+                                    self.widgets.play_button.set_sensitive(true);
+                                }
+                            }
                         }
 
                         goto_dialog.close();
@@ -217,7 +278,18 @@ impl Update for Win {
 
                         self.model.chunk_number = 0;
                         self.model.chunk_total = num_paragraphs;
+                        self.model.audio_processor = ChunkAudioIO::new(self.model.chunk_total as usize);
                         show_chunk(0, &self.model.chunk_retriever, paragraph_ui).unwrap();
+
+                        self.widgets.next_chunk_button.set_sensitive(true);
+                        self.widgets.goto_menu_item.set_sensitive(true);
+                        self.widgets.record_button.set_sensitive(true);
+
+                        if let Ok(file_status) = self.model.audio_processor.go_to(self.model.chunk_number as usize) {
+                            if file_status == FileStatus::Exists {
+                                self.widgets.play_button.set_sensitive(true);
+                            }
+                        }
 
                         file_chooser.close();
                     }
@@ -225,6 +297,43 @@ impl Update for Win {
                 }
             }
             Msg::Quit => gtk::main_quit(),
+            Msg::Play => {
+                if self.model.audio_status == ProcessingStatus::Playing {
+                    self.model.audio_status = self.model.audio_processor.pause().unwrap();
+                } else {
+                    self.model.audio_status = self.model.audio_processor.play().unwrap();
+                }
+
+                self.widgets.record_button.set_sensitive(false);
+                self.widgets.stop_button.set_sensitive(true);
+
+                self.widgets.previous_chunk_button.set_sensitive(false);
+                self.widgets.next_chunk_button.set_sensitive(false);
+            }
+            Msg::Stop => {
+                if self.model.audio_status == ProcessingStatus::Recording {
+                    self.model.audio_status = self.model.audio_processor.stop_recording().unwrap();
+                } else {
+                    self.model.audio_status = self.model.audio_processor.stop().unwrap();
+                }
+
+                self.widgets.record_button.set_sensitive(true);
+                self.widgets.play_button.set_sensitive(true);
+                self.widgets.stop_button.set_sensitive(false);
+
+                change_prev_button_sensitivity(self.model.chunk_number, &self.widgets.previous_chunk_button);
+                change_next_button_sensitivity(self.model.chunk_number, self.model.chunk_total, &self.widgets.next_chunk_button);
+            }
+            Msg::Record => {
+                self.model.audio_status = self.model.audio_processor.record().unwrap();
+
+                self.widgets.record_button.set_sensitive(false);
+                self.widgets.play_button.set_sensitive(false);
+                self.widgets.stop_button.set_sensitive(true);
+
+                self.widgets.previous_chunk_button.set_sensitive(false);
+                self.widgets.next_chunk_button.set_sensitive(false);
+            }
         }
     }
 }
@@ -247,8 +356,12 @@ impl Widget for Win {
 
         let chunk_progress_label: Label = builder.get_object("chunk_position_lbl").unwrap();
         let text_viewer: TextView = builder.get_object("chunk_view_txtviewer").unwrap();
+
         let prev_button: Button = builder.get_object("prev_chunk_btn").unwrap();
         let next_button: Button = builder.get_object("next_chunk_btn").unwrap();
+        let stop_button: Button = builder.get_object("stop_btn").unwrap();
+        let record_button: Button = builder.get_object("record_btn").unwrap();
+        let play_button: Button = builder.get_object("play/pause_btn").unwrap();
 
         let open_menu_item: MenuItem = builder.get_object("open_menu").unwrap();
         let goto_menu_item: MenuItem = builder.get_object("goto_menu").unwrap();
@@ -256,6 +369,9 @@ impl Widget for Win {
 
         connect!(relm, prev_button, connect_clicked(_), Msg::Previous);
         connect!(relm, next_button, connect_clicked(_), Msg::Next);
+        connect!(relm, stop_button, connect_clicked(_), Msg::Stop);
+        connect!(relm, play_button, connect_clicked(_), Msg::Play);
+        connect!(relm, record_button, connect_clicked(_), Msg::Record);
         connect!(
             relm,
             window,
@@ -274,6 +390,9 @@ impl Widget for Win {
                 chunk_viewer: text_viewer,
                 previous_chunk_button: prev_button,
                 next_chunk_button: next_button,
+                stop_button,
+                record_button,
+                play_button,
                 window,
                 open_menu_item,
                 goto_menu_item,

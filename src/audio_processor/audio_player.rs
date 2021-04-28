@@ -46,11 +46,11 @@ fn output_stream_from(
 }
 
 impl CpalAudioPlayer {
-    pub fn new() -> CpalAudioPlayer {
+    pub fn new() -> Self {
         let host = default_host();
         let output_device = host.default_output_device().unwrap();
 
-        CpalAudioPlayer {
+        Self {
             output_device,
             output_stream: None,
             output_duration_secs: 0,
