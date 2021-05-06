@@ -1,4 +1,4 @@
-mod audio_processor;
+mod media_io;
 mod text_grabber;
 
 use gtk::prelude::*;
@@ -6,12 +6,14 @@ use gtk::{
     Builder, Button, Dialog, DialogFlags, FileFilter, Inhibit, Label, MenuItem, ResponseType,
     SpinButton, TextView, Window,
 };
-use relm::{connect, Relm, Update, Widget};
+use relm::{connect, interval, Relm, Update, Widget};
 use relm_derive::Msg;
 
+use crate::Msg::ProgressTick;
+use media_io::prelude::*;
+use media_io::ProcessingStatus;
 use std::fs::File;
 use text_grabber::{EnglishParagraphRetriever, TextGrabber};
-use crate::audio_processor::{ChunkAudioIO, ProcessingStatus, AudioProcessor, FileStatus};
 
 /// Holds the variables necessary to navigate chunks
 /// in some UTF-8 text file.
@@ -25,7 +27,9 @@ struct Model {
     chunk_number: u32,
     chunk_total: u32,
 
-    audio_processor: ChunkAudioIO,
+    audio_processor: AudioIO,
+    ms_passed: u32,
+    ms_total: u32,
     audio_status: ProcessingStatus,
 }
 
@@ -38,6 +42,8 @@ enum Msg {
     Play,
     Stop,
     Record,
+
+    ProgressTick,
 
     JumpTo,
     LoadFile,
@@ -60,6 +66,7 @@ struct Widgets {
     stop_button: Button,
     record_button: Button,
     play_button: Button,
+    audio_progress_label: Label,
 
     window: Window,
     // Menu Widgets
@@ -112,6 +119,24 @@ fn change_next_button_sensitivity(chunk_num: u32, chunk_total: u32, next_button:
     }
 }
 
+/// Makes play button active or inactive relative to the file status.
+fn change_play_button_sensitivity(file_status: FileStatus, play_button: &Button) {
+    if file_status == FileStatus::Exists {
+        play_button.set_sensitive(true);
+    } else {
+        play_button.set_sensitive(false);
+    }
+}
+
+/// Converts ms to hours:minutes:seconds format
+fn to_hh_mm_ss_str(ms: u32) -> String {
+    let seconds = ms / 1000;
+    let minutes = seconds / 60;
+    let hours = minutes / 60;
+
+    format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
+}
+
 /// Abstracts the whole application, merging
 /// the Model and references to the View and Controller
 /// widgets.
@@ -137,23 +162,62 @@ impl Update for Win {
             chunk_number: 0,
             chunk_total: 0,
 
-            audio_processor: ChunkAudioIO::new(0),
+            audio_processor: AudioIO::new(0),
+            ms_passed: 0,
+            ms_total: 0,
             audio_status: ProcessingStatus::Stopped,
         }
+    }
+
+    fn subscriptions(&mut self, relm: &Relm<Self>) {
+        interval(relm.stream(), 100, || ProgressTick);
     }
 
     // This is where all User Events are parsed, influencing how
     // the Model and View changes.
     fn update(&mut self, event: Msg) {
-        let progress_label = &self.widgets.chunk_progress_label;
+        let prg_progress_label = &self.widgets.chunk_progress_label;
         let text_viewer = &self.widgets.chunk_viewer;
+        let audio_progress_label = &self.widgets.audio_progress_label;
 
         let paragraph_ui = ChunkViewingUi {
-            progress_label,
+            progress_label: prg_progress_label,
             chunk_viewer: text_viewer,
         };
 
         match event {
+            Msg::ProgressTick => match self.model.audio_status {
+                ProcessingStatus::Playing => {
+                    self.model.ms_passed += 100;
+                    let current_time = to_hh_mm_ss_str(self.model.ms_passed);
+                    let total_time = to_hh_mm_ss_str(self.model.ms_total);
+
+                    let progress_text = format!("{}/{}", current_time, total_time);
+                    audio_progress_label.set_markup(progress_text.as_str());
+
+                    if current_time.eq(&total_time) {
+                        self.update(Msg::Stop);
+                    }
+                }
+                ProcessingStatus::Recording => {
+                    self.model.ms_passed += 100;
+                    let progress_text = format!(
+                        "{}/{}",
+                        to_hh_mm_ss_str(self.model.ms_passed),
+                        to_hh_mm_ss_str(self.model.ms_passed)
+                    );
+                    audio_progress_label.set_markup(progress_text.as_str());
+                }
+                ProcessingStatus::Stopped => {
+                    let progress_text = format!(
+                        "{}/{}",
+                        to_hh_mm_ss_str(0),
+                        to_hh_mm_ss_str(self.model.ms_total)
+                    );
+                    audio_progress_label.set_markup(progress_text.as_str());
+                }
+                _ => {}
+            },
             Msg::Next => {
                 if show_chunk(
                     self.model.chunk_number + 1,
@@ -165,12 +229,27 @@ impl Update for Win {
                     self.model.chunk_number += 1;
 
                     self.widgets.previous_chunk_button.set_sensitive(true);
-                    change_next_button_sensitivity(self.model.chunk_number, self.model.chunk_total, &self.widgets.next_chunk_button);
+                    change_next_button_sensitivity(
+                        self.model.chunk_number,
+                        self.model.chunk_total,
+                        &self.widgets.next_chunk_button,
+                    );
 
                     if let Ok(file_status) = self.model.audio_processor.next() {
-                        if file_status == FileStatus::Exists {
-                            self.widgets.play_button.set_sensitive(true);
-                        }
+                        change_play_button_sensitivity(file_status, &self.widgets.play_button);
+
+                        let duration_ms = match file_status {
+                            FileStatus::Exists => self.model.audio_processor.duration(),
+                            FileStatus::New => 0,
+                        };
+
+                        self.model.ms_total = duration_ms;
+                        let progress_text = format!(
+                            "{}/{}",
+                            to_hh_mm_ss_str(self.model.ms_passed),
+                            to_hh_mm_ss_str(self.model.ms_total)
+                        );
+                        audio_progress_label.set_markup(progress_text.as_str());
                     }
                 }
             }
@@ -189,12 +268,18 @@ impl Update for Win {
                     self.model.chunk_number -= 1;
 
                     self.widgets.next_chunk_button.set_sensitive(true);
-                    change_prev_button_sensitivity(self.model.chunk_number, &self.widgets.previous_chunk_button);
+                    change_prev_button_sensitivity(
+                        self.model.chunk_number,
+                        &self.widgets.previous_chunk_button,
+                    );
 
                     if let Ok(file_status) = self.model.audio_processor.prev() {
-                        if file_status == FileStatus::Exists {
-                            self.widgets.play_button.set_sensitive(true);
-                        }
+                        change_play_button_sensitivity(file_status, &self.widgets.play_button);
+
+                        self.model.ms_total = match file_status {
+                            FileStatus::Exists => self.model.audio_processor.duration(),
+                            FileStatus::New => 0,
+                        };
                     }
                 }
             }
@@ -231,13 +316,30 @@ impl Update for Win {
                         {
                             self.model.chunk_number = goto_paragraph_num;
 
-                            change_next_button_sensitivity(self.model.chunk_number, self.model.chunk_total, &self.widgets.next_chunk_button);
-                            change_prev_button_sensitivity(self.model.chunk_number, &self.widgets.previous_chunk_button);
+                            change_next_button_sensitivity(
+                                self.model.chunk_number,
+                                self.model.chunk_total,
+                                &self.widgets.next_chunk_button,
+                            );
+                            change_prev_button_sensitivity(
+                                self.model.chunk_number,
+                                &self.widgets.previous_chunk_button,
+                            );
 
-                            if let Ok(file_status) = self.model.audio_processor.go_to(self.model.chunk_number as usize) {
-                                if file_status == FileStatus::Exists {
-                                    self.widgets.play_button.set_sensitive(true);
-                                }
+                            if let Ok(file_status) = self
+                                .model
+                                .audio_processor
+                                .go_to(self.model.chunk_number as usize)
+                            {
+                                change_play_button_sensitivity(
+                                    file_status,
+                                    &self.widgets.play_button,
+                                );
+
+                                self.model.ms_total = match file_status {
+                                    FileStatus::Exists => self.model.audio_processor.duration(),
+                                    FileStatus::New => 0,
+                                };
                             }
                         }
 
@@ -278,17 +380,21 @@ impl Update for Win {
 
                         self.model.chunk_number = 0;
                         self.model.chunk_total = num_paragraphs;
-                        self.model.audio_processor = ChunkAudioIO::new(self.model.chunk_total as usize);
+                        self.model.audio_processor = AudioIO::new(self.model.chunk_total as usize);
                         show_chunk(0, &self.model.chunk_retriever, paragraph_ui).unwrap();
 
                         self.widgets.next_chunk_button.set_sensitive(true);
                         self.widgets.goto_menu_item.set_sensitive(true);
                         self.widgets.record_button.set_sensitive(true);
 
-                        if let Ok(file_status) = self.model.audio_processor.go_to(self.model.chunk_number as usize) {
-                            if file_status == FileStatus::Exists {
-                                self.widgets.play_button.set_sensitive(true);
-                            }
+                        if let Ok(file_status) = self
+                            .model
+                            .audio_processor
+                            .go_to(self.model.chunk_number as usize)
+                        {
+                            change_play_button_sensitivity(file_status, &self.widgets.play_button);
+
+                            self.model.ms_total = self.model.audio_processor.duration();
                         }
 
                         file_chooser.close();
@@ -299,9 +405,18 @@ impl Update for Win {
             Msg::Quit => gtk::main_quit(),
             Msg::Play => {
                 if self.model.audio_status == ProcessingStatus::Playing {
-                    self.model.audio_status = self.model.audio_processor.pause().unwrap();
+                    self.model.audio_status = self
+                        .model
+                        .audio_processor
+                        .pause(self.model.ms_passed)
+                        .unwrap();
+                    self.widgets.play_button.set_label("Play");
                 } else {
                     self.model.audio_status = self.model.audio_processor.play().unwrap();
+                    self.widgets.play_button.set_label("Pause");
+                    if self.model.ms_total == 0 {
+                        self.model.ms_total = self.model.audio_processor.duration();
+                    }
                 }
 
                 self.widgets.record_button.set_sensitive(false);
@@ -319,10 +434,21 @@ impl Update for Win {
 
                 self.widgets.record_button.set_sensitive(true);
                 self.widgets.play_button.set_sensitive(true);
+                self.widgets.play_button.set_label("Play");
+
                 self.widgets.stop_button.set_sensitive(false);
 
-                change_prev_button_sensitivity(self.model.chunk_number, &self.widgets.previous_chunk_button);
-                change_next_button_sensitivity(self.model.chunk_number, self.model.chunk_total, &self.widgets.next_chunk_button);
+                change_prev_button_sensitivity(
+                    self.model.chunk_number,
+                    &self.widgets.previous_chunk_button,
+                );
+                change_next_button_sensitivity(
+                    self.model.chunk_number,
+                    self.model.chunk_total,
+                    &self.widgets.next_chunk_button,
+                );
+
+                self.model.ms_passed = 0;
             }
             Msg::Record => {
                 self.model.audio_status = self.model.audio_processor.record().unwrap();
@@ -362,6 +488,7 @@ impl Widget for Win {
         let stop_button: Button = builder.get_object("stop_btn").unwrap();
         let record_button: Button = builder.get_object("record_btn").unwrap();
         let play_button: Button = builder.get_object("play/pause_btn").unwrap();
+        let audio_progress_label: Label = builder.get_object("audio_progress_lbl").unwrap();
 
         let open_menu_item: MenuItem = builder.get_object("open_menu").unwrap();
         let goto_menu_item: MenuItem = builder.get_object("goto_menu").unwrap();
@@ -393,6 +520,7 @@ impl Widget for Win {
                 stop_button,
                 record_button,
                 play_button,
+                audio_progress_label,
                 window,
                 open_menu_item,
                 goto_menu_item,

@@ -164,12 +164,11 @@
             <property name="column-homogeneous">True</property>
             <child>
               <object class="GtkButton" id="prev_chunk_btn">
-                <property name="label">gtk-media-previous</property>
+                <property name="label">Previous</property>
                 <property name="visible">True</property>
                 <property name="sensitive">False</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>
-                <property name="use-stock">True</property>
               </object>
               <packing>
                 <property name="left-attach">0</property>
@@ -178,12 +177,11 @@
             </child>
             <child>
               <object class="GtkButton" id="next_chunk_btn">
-                <property name="label">gtk-media-next</property>
+                <property name="label">Next</property>
                 <property name="visible">True</property>
                 <property name="sensitive">False</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>
-                <property name="use-stock">True</property>
               </object>
               <packing>
                 <property name="left-attach">2</property>
@@ -192,12 +190,11 @@
             </child>
             <child>
               <object class="GtkButton" id="stop_btn">
-                <property name="label">gtk-media-stop</property>
+                <property name="label">Stop</property>
                 <property name="visible">True</property>
                 <property name="sensitive">False</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>
-                <property name="use-stock">True</property>
               </object>
               <packing>
                 <property name="left-attach">0</property>
@@ -206,12 +203,11 @@
             </child>
             <child>
               <object class="GtkButton" id="record_btn">
-                <property name="label">gtk-media-record</property>
+                <property name="label">Record</property>
                 <property name="visible">True</property>
                 <property name="sensitive">False</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>
-                <property name="use-stock">True</property>
               </object>
               <packing>
                 <property name="left-attach">1</property>
@@ -220,12 +216,11 @@
             </child>
             <child>
               <object class="GtkButton" id="play/pause_btn">
-                <property name="label">gtk-media-play</property>
+                <property name="label">Play</property>
                 <property name="visible">True</property>
                 <property name="sensitive">False</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>
-                <property name="use-stock">True</property>
               </object>
               <packing>
                 <property name="left-attach">2</property>
@@ -233,7 +228,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkLabel" id="progress_lbl">
+              <object class="GtkLabel" id="audio_progress_lbl">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="label" translatable="yes">00:00:00/00:00:00</property>

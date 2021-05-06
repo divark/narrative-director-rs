@@ -118,7 +118,7 @@ impl CpalAudioRecorder {
 
 #[cfg(test)]
 mod tests {
-    use crate::audio_processor::audio_recorder::CpalAudioRecorder;
+    use crate::media_io::audio_recorder::CpalAudioRecorder;
     use std::fs;
     use std::thread::sleep;
     use std::time::Duration;
