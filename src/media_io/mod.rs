@@ -32,7 +32,7 @@ pub mod prelude {
         fn stop(&mut self) -> Result<ProcessingStatus, String>;
 
         // Skip to n seconds in for the media.
-        fn skip_to(&mut self, position_in_seconds: u32);
+        fn skip_to(&mut self, position_in_seconds: u32) -> Result<ProcessingStatus, String>;
 
         // Proceeds to next media track.
         fn next(&mut self) -> Result<FileStatus, String>;

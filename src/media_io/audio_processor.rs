@@ -53,8 +53,20 @@ impl MediaProcessor for AudioIO {
         Ok(ProcessingStatus::Stopped)
     }
 
-    fn skip_to(&mut self, pos_ms: u32) {
-        todo!()
+    fn skip_to(&mut self, pos_ms: u32) -> Result<ProcessingStatus, String> {
+        let input_file = format!("part{}.wav", self.current_chunk_index);
+        let input_path = Path::new(&input_file);
+        if !input_path.exists() {
+            return Err("AudioIO skip_to error: File does not exist.".to_string());
+        }
+
+        match self.player.play_at(input_file.clone(), pos_ms) {
+            Ok(duration_ms) => {
+                self.player_duration_ms = duration_ms;
+                Ok(ProcessingStatus::Playing)
+            }
+            Err(playback_error) => Err(format!("AudioIO skip_to error: {:?}", playback_error)),
+        }
     }
 
     fn next(&mut self) -> Result<FileStatus, String> {

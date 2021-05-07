@@ -3,8 +3,8 @@ mod text_grabber;
 
 use gtk::prelude::*;
 use gtk::{
-    Builder, Button, Dialog, DialogFlags, FileFilter, Inhibit, Label, MenuItem, ResponseType,
-    SpinButton, TextView, Window,
+    Adjustment, Builder, Button, Dialog, DialogFlags, FileFilter, Inhibit, Label, MenuItem,
+    ResponseType, Scrollbar, SpinButton, TextView, Window,
 };
 use relm::{connect, interval, Relm, Update, Widget};
 use relm_derive::Msg;
@@ -42,6 +42,7 @@ enum Msg {
     Play,
     Stop,
     Record,
+    AudioSkip,
 
     ProgressTick,
 
@@ -67,6 +68,7 @@ struct Widgets {
     record_button: Button,
     play_button: Button,
     audio_progress_label: Label,
+    progress_bar: Scrollbar,
 
     window: Window,
     // Menu Widgets
@@ -179,6 +181,7 @@ impl Update for Win {
         let prg_progress_label = &self.widgets.chunk_progress_label;
         let text_viewer = &self.widgets.chunk_viewer;
         let audio_progress_label = &self.widgets.audio_progress_label;
+        let progress_bar = &self.widgets.progress_bar;
 
         let paragraph_ui = ChunkViewingUi {
             progress_label: prg_progress_label,
@@ -197,10 +200,14 @@ impl Update for Win {
 
                     if current_time.eq(&total_time) {
                         self.update(Msg::Stop);
+                        return;
                     }
+
+                    progress_bar.set_value(self.model.ms_passed as f64 / 1000.0);
                 }
                 ProcessingStatus::Recording => {
                     self.model.ms_passed += 100;
+                    self.model.ms_total = self.model.ms_passed;
                     let progress_text = format!(
                         "{}/{}",
                         to_hh_mm_ss_str(self.model.ms_passed),
@@ -211,7 +218,7 @@ impl Update for Win {
                 ProcessingStatus::Stopped => {
                     let progress_text = format!(
                         "{}/{}",
-                        to_hh_mm_ss_str(0),
+                        to_hh_mm_ss_str(self.model.ms_passed),
                         to_hh_mm_ss_str(self.model.ms_total)
                     );
                     audio_progress_label.set_markup(progress_text.as_str());
@@ -250,6 +257,18 @@ impl Update for Win {
                             to_hh_mm_ss_str(self.model.ms_total)
                         );
                         audio_progress_label.set_markup(progress_text.as_str());
+
+                        self.model.ms_passed = 0;
+                        let secs_passed = (self.model.ms_passed / 1000) as f64;
+                        let secs_total = (self.model.ms_total / 1000) as f64;
+                        progress_bar.set_adjustment(&Adjustment::new(
+                            secs_passed,
+                            0.0,
+                            secs_total,
+                            1.0,
+                            1.0,
+                            1.0,
+                        ));
                     }
                 }
             }
@@ -280,6 +299,18 @@ impl Update for Win {
                             FileStatus::Exists => self.model.audio_processor.duration(),
                             FileStatus::New => 0,
                         };
+
+                        self.model.ms_passed = 0;
+                        let secs_passed = (self.model.ms_passed / 1000) as f64;
+                        let secs_total = (self.model.ms_total / 1000) as f64;
+                        progress_bar.set_adjustment(&Adjustment::new(
+                            secs_passed,
+                            0.0,
+                            secs_total,
+                            1.0,
+                            1.0,
+                            1.0,
+                        ));
                     }
                 }
             }
@@ -340,6 +371,12 @@ impl Update for Win {
                                     FileStatus::Exists => self.model.audio_processor.duration(),
                                     FileStatus::New => 0,
                                 };
+
+                                self.model.ms_passed = 0;
+                                let secs_total = (self.model.ms_total / 1000) as f64;
+                                progress_bar.set_adjustment(&Adjustment::new(
+                                    0.0, 0.0, secs_total, 1.0, 1.0, 1.0,
+                                ));
                             }
                         }
 
@@ -394,7 +431,13 @@ impl Update for Win {
                         {
                             change_play_button_sensitivity(file_status, &self.widgets.play_button);
 
+                            self.model.ms_passed = 0;
                             self.model.ms_total = self.model.audio_processor.duration();
+
+                            let secs_total = (self.model.ms_total / 1000) as f64;
+                            progress_bar.set_adjustment(&Adjustment::new(
+                                0.0, 0.0, secs_total, 1.0, 1.0, 1.0,
+                            ));
                         }
 
                         file_chooser.close();
@@ -412,7 +455,13 @@ impl Update for Win {
                         .unwrap();
                     self.widgets.play_button.set_label("Play");
                 } else {
-                    self.model.audio_status = self.model.audio_processor.play().unwrap();
+                    self.model.audio_status = match self.widgets.progress_bar.get_value() {
+                        x if x >= 1.0 => {
+                            self.model.audio_processor.skip_to(x as u32 * 1000).unwrap()
+                        }
+                        _ => self.model.audio_processor.play().unwrap(),
+                    };
+
                     self.widgets.play_button.set_label("Pause");
                     if self.model.ms_total == 0 {
                         self.model.ms_total = self.model.audio_processor.duration();
@@ -424,6 +473,21 @@ impl Update for Win {
 
                 self.widgets.previous_chunk_button.set_sensitive(false);
                 self.widgets.next_chunk_button.set_sensitive(false);
+            }
+            Msg::AudioSkip => {
+                if self.model.audio_status == ProcessingStatus::Playing
+                    || self.model.audio_status == ProcessingStatus::Recording
+                {
+                    return;
+                }
+
+                self.model.ms_passed = self.widgets.progress_bar.get_value() as u32 * 1000;
+                let progress_text = format!(
+                    "{}/{}",
+                    to_hh_mm_ss_str(self.model.ms_passed),
+                    to_hh_mm_ss_str(self.model.ms_total)
+                );
+                audio_progress_label.set_markup(progress_text.as_str());
             }
             Msg::Stop => {
                 if self.model.audio_status == ProcessingStatus::Recording {
@@ -449,6 +513,9 @@ impl Update for Win {
                 );
 
                 self.model.ms_passed = 0;
+
+                let secs_total = (self.model.ms_total / 1000) as f64;
+                progress_bar.set_adjustment(&Adjustment::new(0.0, 0.0, secs_total, 1.0, 1.0, 1.0));
             }
             Msg::Record => {
                 self.model.audio_status = self.model.audio_processor.record().unwrap();
@@ -489,6 +556,7 @@ impl Widget for Win {
         let record_button: Button = builder.get_object("record_btn").unwrap();
         let play_button: Button = builder.get_object("play/pause_btn").unwrap();
         let audio_progress_label: Label = builder.get_object("audio_progress_lbl").unwrap();
+        let progress_bar: Scrollbar = builder.get_object("progress_bar").unwrap();
 
         let open_menu_item: MenuItem = builder.get_object("open_menu").unwrap();
         let goto_menu_item: MenuItem = builder.get_object("goto_menu").unwrap();
@@ -505,6 +573,7 @@ impl Widget for Win {
             connect_delete_event(_, _),
             return (Some(Msg::Quit), Inhibit(false))
         );
+        connect!(relm, progress_bar, connect_value_changed(_), Msg::AudioSkip);
 
         connect!(relm, open_menu_item, connect_activate(_), Msg::LoadFile);
         connect!(relm, goto_menu_item, connect_activate(_), Msg::JumpTo);
@@ -521,6 +590,7 @@ impl Widget for Win {
                 record_button,
                 play_button,
                 audio_progress_label,
+                progress_bar,
                 window,
                 open_menu_item,
                 goto_menu_item,
