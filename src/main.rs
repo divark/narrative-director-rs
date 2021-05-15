@@ -2,10 +2,7 @@ mod media_io;
 mod text_grabber;
 
 use gtk::prelude::*;
-use gtk::{
-    Adjustment, Builder, Button, Dialog, DialogFlags, FileFilter, Inhibit, Label, MenuItem,
-    ResponseType, Scrollbar, SpinButton, TextView, Window,
-};
+use gtk::{Adjustment, Builder, Button, Dialog, DialogFlags, FileFilter, Inhibit, Label, MenuItem, ResponseType, Scrollbar, SpinButton, TextView, Window, AboutDialog};
 use relm::{connect, interval, Relm, Update, Widget};
 use relm_derive::Msg;
 
@@ -48,6 +45,7 @@ enum Msg {
 
     JumpTo,
     LoadFile,
+    About,
     Quit,
 }
 
@@ -74,7 +72,11 @@ struct Widgets {
     // Menu Widgets
     open_menu_item: MenuItem,
     goto_menu_item: MenuItem,
+    about_menu_item: MenuItem,
     quit_menu_item: MenuItem,
+
+    // Dialogs
+    about_dialog: AboutDialog,
 }
 
 struct ChunkViewingUi<'a> {
@@ -527,6 +529,10 @@ impl Update for Win {
                 self.widgets.previous_chunk_button.set_sensitive(false);
                 self.widgets.next_chunk_button.set_sensitive(false);
             }
+            Msg::About => {
+                self.widgets.about_dialog.run();
+                self.widgets.about_dialog.hide();
+            }
         }
     }
 }
@@ -560,7 +566,10 @@ impl Widget for Win {
 
         let open_menu_item: MenuItem = builder.get_object("open_menu").unwrap();
         let goto_menu_item: MenuItem = builder.get_object("goto_menu").unwrap();
+        let about_menu_item: MenuItem = builder.get_object("about_menu").unwrap();
         let quit_menu_item: MenuItem = builder.get_object("close_menu").unwrap();
+
+        let about_dialog: AboutDialog = builder.get_object("about_dialog").unwrap();
 
         connect!(relm, prev_button, connect_clicked(_), Msg::Previous);
         connect!(relm, next_button, connect_clicked(_), Msg::Next);
@@ -577,6 +586,7 @@ impl Widget for Win {
 
         connect!(relm, open_menu_item, connect_activate(_), Msg::LoadFile);
         connect!(relm, goto_menu_item, connect_activate(_), Msg::JumpTo);
+        connect!(relm, about_menu_item, connect_activate(_), Msg::About);
         connect!(quit_menu_item, connect_activate(_), relm, Msg::Quit);
 
         Win {
@@ -594,7 +604,9 @@ impl Widget for Win {
                 window,
                 open_menu_item,
                 goto_menu_item,
+                about_menu_item,
                 quit_menu_item,
+                about_dialog
             },
         }
     }

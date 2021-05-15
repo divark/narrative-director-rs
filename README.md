@@ -2,7 +2,7 @@
 
 ## Summary
 Narrative Director is an Audio/Video Recording Pacer application, with a focus on error-free readings.
-This tool aspires to keep editing to a minimum, keeping only recordings that are satisfactory by the reader.
+This tool aspires to keep editing to a minimum, only containing recordings that are satisfactory by the reader.
 
 The Rust Edition serves as a successor to the [Qt 5 edition of Narrative Director](https://github.com/divark/narrative-director), in
 addition to having an excuse to learn about [Rust](https://www.rust-lang.org/) and [Relm](https://github.com/antoyo/relm).
@@ -11,8 +11,8 @@ addition to having an excuse to learn about [Rust](https://www.rust-lang.org/) a
 ### Current
 - Read paragraph-by-paragraph (4 sentences) from UTF-8 text files.
 - Jump to particular paragraph entry.
-### Planned
 - Play, Pause, Stop, and Record Audio for each paragraph entry.
+### Planned
 - Play, Stop, and Record Video for each paragraph entry.
 
 ## Mock-ups
