@@ -2,7 +2,10 @@ mod media_io;
 mod text_grabber;
 
 use gtk::prelude::*;
-use gtk::{Adjustment, Builder, Button, Dialog, DialogFlags, FileFilter, Inhibit, Label, MenuItem, ResponseType, Scrollbar, SpinButton, TextView, Window, AboutDialog};
+use gtk::{
+    AboutDialog, Adjustment, Builder, Button, Dialog, DialogFlags, FileFilter, Inhibit, Label,
+    MenuItem, ResponseType, Scrollbar, SpinButton, TextView, Window,
+};
 use relm::{connect, interval, Relm, Update, Widget};
 use relm_derive::Msg;
 
@@ -337,55 +340,50 @@ impl Update for Win {
 
                 goto_dialog.show_all();
 
-                match goto_dialog.run() {
-                    ResponseType::Ok => {
-                        let goto_paragraph_num = (goto_spin_button.get_value_as_int() - 1) as u32;
-                        if show_chunk(
-                            goto_paragraph_num,
-                            &self.model.chunk_retriever,
-                            paragraph_ui,
-                        )
-                        .is_ok()
+                let goto_dialog_response = goto_dialog.run();
+                if goto_dialog_response == ResponseType::Ok {
+                    let goto_paragraph_num = (goto_spin_button.get_value_as_int() - 1) as u32;
+                    if show_chunk(
+                        goto_paragraph_num,
+                        &self.model.chunk_retriever,
+                        paragraph_ui,
+                    )
+                    .is_ok()
+                    {
+                        self.model.chunk_number = goto_paragraph_num;
+
+                        change_next_button_sensitivity(
+                            self.model.chunk_number,
+                            self.model.chunk_total,
+                            &self.widgets.next_chunk_button,
+                        );
+                        change_prev_button_sensitivity(
+                            self.model.chunk_number,
+                            &self.widgets.previous_chunk_button,
+                        );
+
+                        if let Ok(file_status) = self
+                            .model
+                            .audio_processor
+                            .go_to(self.model.chunk_number as usize)
                         {
-                            self.model.chunk_number = goto_paragraph_num;
+                            change_play_button_sensitivity(file_status, &self.widgets.play_button);
 
-                            change_next_button_sensitivity(
-                                self.model.chunk_number,
-                                self.model.chunk_total,
-                                &self.widgets.next_chunk_button,
-                            );
-                            change_prev_button_sensitivity(
-                                self.model.chunk_number,
-                                &self.widgets.previous_chunk_button,
-                            );
+                            self.model.ms_total = match file_status {
+                                FileStatus::Exists => self.model.audio_processor.duration(),
+                                FileStatus::New => 0,
+                            };
 
-                            if let Ok(file_status) = self
-                                .model
-                                .audio_processor
-                                .go_to(self.model.chunk_number as usize)
-                            {
-                                change_play_button_sensitivity(
-                                    file_status,
-                                    &self.widgets.play_button,
-                                );
-
-                                self.model.ms_total = match file_status {
-                                    FileStatus::Exists => self.model.audio_processor.duration(),
-                                    FileStatus::New => 0,
-                                };
-
-                                self.model.ms_passed = 0;
-                                let secs_total = (self.model.ms_total / 1000) as f64;
-                                progress_bar.set_adjustment(&Adjustment::new(
-                                    0.0, 0.0, secs_total, 1.0, 1.0, 1.0,
-                                ));
-                            }
+                            self.model.ms_passed = 0;
+                            let secs_total = (self.model.ms_total / 1000) as f64;
+                            progress_bar.set_adjustment(&Adjustment::new(
+                                0.0, 0.0, secs_total, 1.0, 1.0, 1.0,
+                            ));
                         }
-
-                        goto_dialog.close();
                     }
-                    _ => goto_dialog.close(),
                 }
+
+                goto_dialog.close();
             }
             Msg::LoadFile => {
                 let file_chooser = gtk::FileChooserDialog::new(
@@ -405,47 +403,44 @@ impl Update for Win {
 
                 file_chooser.add_filter(&text_file_filter);
 
-                match file_chooser.run() {
-                    ResponseType::Ok => {
-                        let filename = file_chooser.get_filename().expect("Couldn't get filename");
-                        let file = File::open(&filename).expect("Couldn't open file");
+                let file_chooser_response = file_chooser.run();
+                if file_chooser_response == ResponseType::Ok {
+                    let filename = file_chooser.get_filename().expect("Couldn't get filename");
+                    let file = File::open(&filename).expect("Couldn't open file");
 
-                        self.model.chunk_retriever = EnglishParagraphRetriever::new();
-                        let num_paragraphs = self.model.chunk_retriever.load_chunks(file);
+                    self.model.chunk_retriever = EnglishParagraphRetriever::new();
+                    let num_paragraphs = self.model.chunk_retriever.load_chunks(file);
 
-                        if num_paragraphs == 0 {
-                            return;
-                        }
-
-                        self.model.chunk_number = 0;
-                        self.model.chunk_total = num_paragraphs;
-                        self.model.audio_processor = AudioIO::new(self.model.chunk_total as usize);
-                        show_chunk(0, &self.model.chunk_retriever, paragraph_ui).unwrap();
-
-                        self.widgets.next_chunk_button.set_sensitive(true);
-                        self.widgets.goto_menu_item.set_sensitive(true);
-                        self.widgets.record_button.set_sensitive(true);
-
-                        if let Ok(file_status) = self
-                            .model
-                            .audio_processor
-                            .go_to(self.model.chunk_number as usize)
-                        {
-                            change_play_button_sensitivity(file_status, &self.widgets.play_button);
-
-                            self.model.ms_passed = 0;
-                            self.model.ms_total = self.model.audio_processor.duration();
-
-                            let secs_total = (self.model.ms_total / 1000) as f64;
-                            progress_bar.set_adjustment(&Adjustment::new(
-                                0.0, 0.0, secs_total, 1.0, 1.0, 1.0,
-                            ));
-                        }
-
-                        file_chooser.close();
+                    if num_paragraphs == 0 {
+                        return;
                     }
-                    _ => file_chooser.close(),
+
+                    self.model.chunk_number = 0;
+                    self.model.chunk_total = num_paragraphs;
+                    self.model.audio_processor = AudioIO::new(self.model.chunk_total as usize);
+                    show_chunk(0, &self.model.chunk_retriever, paragraph_ui).unwrap();
+
+                    self.widgets.next_chunk_button.set_sensitive(true);
+                    self.widgets.goto_menu_item.set_sensitive(true);
+                    self.widgets.record_button.set_sensitive(true);
+
+                    if let Ok(file_status) = self
+                        .model
+                        .audio_processor
+                        .go_to(self.model.chunk_number as usize)
+                    {
+                        change_play_button_sensitivity(file_status, &self.widgets.play_button);
+
+                        self.model.ms_passed = 0;
+                        self.model.ms_total = self.model.audio_processor.duration();
+
+                        let secs_total = (self.model.ms_total / 1000) as f64;
+                        progress_bar
+                            .set_adjustment(&Adjustment::new(0.0, 0.0, secs_total, 1.0, 1.0, 1.0));
+                    }
                 }
+
+                file_chooser.close();
             }
             Msg::Quit => gtk::main_quit(),
             Msg::Play => {
@@ -606,7 +601,7 @@ impl Widget for Win {
                 goto_menu_item,
                 about_menu_item,
                 quit_menu_item,
-                about_dialog
+                about_dialog,
             },
         }
     }

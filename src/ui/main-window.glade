@@ -257,9 +257,9 @@
     <property name="transient-for">window</property>
     <property name="program-name">Narrative Director</property>
     <property name="version">1.0.0</property>
-    <property name="comments" translatable="yes">Narrative Director is an Audio/Video Recording Pacer application, with a focus on error-free readings. This tool aspires to keep editing to a minimum, only containing recordings that are satisfactory by the reader.</property>
+    <property name="comments" translatable="yes">Narrative Director is an Audio/Video Recording Pacer application, with a focus on error-free readings. This tool aspires to keep editing to a minimum, keeping only recordings that are deemed satisfactory by the reader.</property>
     <property name="authors">Tyler Schmidt &lt;tmschmid@protonmail.com&gt;</property>
-    <property name="logo-icon-name">image-missing</property>
+    <property name="logo">resources/images/icon.png</property>
     <property name="license-type">gpl-3-0</property>
     <signal name="delete-event" handler="gtk_true" swapped="no"/>
     <signal name="delete-event" handler="gtk_widget_hide" swapped="no"/>

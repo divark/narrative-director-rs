@@ -2,7 +2,7 @@
 
 ## Summary
 Narrative Director is an Audio/Video Recording Pacer application, with a focus on error-free readings.
-This tool aspires to keep editing to a minimum, only containing recordings that are satisfactory by the reader.
+This tool aspires to keep editing to a minimum, keeping only recordings that are deemed satisfactory by the reader.
 
 The Rust Edition serves as a successor to the [Qt 5 edition of Narrative Director](https://github.com/divark/narrative-director), in
 addition to having an excuse to learn about [Rust](https://www.rust-lang.org/) and [Relm](https://github.com/antoyo/relm).
@@ -20,6 +20,7 @@ addition to having an excuse to learn about [Rust](https://www.rust-lang.org/) a
 ![Interface Mappings](resources/images/Mappings.png)
 
 ## Known Working Environments
+- M1 Mac Mini
 - Linux x64 (Arch Linux)
 ## Getting Started
 1. Download [Rust](https://www.rust-lang.org/learn/get-started) if you have not already.
