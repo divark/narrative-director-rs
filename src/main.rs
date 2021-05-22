@@ -3,18 +3,25 @@ mod text_grabber;
 
 use gtk::prelude::*;
 use gtk::{
-    AboutDialog, Adjustment, Builder, Button, Dialog, DialogFlags, FileFilter, Inhibit, Label,
-    MenuItem, ResponseType, Scrollbar, SpinButton, TextView, Window,
+    AboutDialog, Adjustment, Builder, Button, ComboBoxText, Dialog, DialogFlags, FileChooser,
+    FileFilter, Inhibit, Label, MenuItem, ResponseType, Scrollbar, SpinButton, TextView, Window,
 };
 use relm::{connect, interval, Relm, Update, Widget};
 use relm_derive::Msg;
 
 use crate::Msg::ProgressTick;
+use cpal::traits::DeviceTrait;
+use cpal::ChannelCount;
 use media_io::prelude::*;
 use media_io::ProcessingStatus;
+use std::collections::HashMap;
 use std::fs::File;
 use text_grabber::{EnglishParagraphRetriever, TextGrabber};
 
+struct InputDevicesInfo {
+    channels: HashMap<String, Vec<ChannelCount>>,
+    sample_rates: HashMap<String, Vec<u32>>,
+}
 /// Holds the variables necessary to navigate chunks
 /// in some UTF-8 text file.
 ///
@@ -31,6 +38,8 @@ struct Model {
     ms_passed: u32,
     ms_total: u32,
     audio_status: ProcessingStatus,
+
+    input_devices_info: Option<InputDevicesInfo>,
 }
 
 /// Represents User Events that could take place
@@ -48,6 +57,8 @@ enum Msg {
 
     JumpTo,
     LoadFile,
+    OpenPreferences,
+    ChangeInputDevicePreference,
     About,
     Quit,
 }
@@ -75,11 +86,23 @@ struct Widgets {
     // Menu Widgets
     open_menu_item: MenuItem,
     goto_menu_item: MenuItem,
+    preferences_menu_item: MenuItem,
     about_menu_item: MenuItem,
     quit_menu_item: MenuItem,
 
     // Dialogs
     about_dialog: AboutDialog,
+
+    // Preferences
+    preferences_dialog: Dialog,
+
+    project_file_chooser: FileChooser,
+
+    input_device_cbox: ComboBoxText,
+    input_sample_rate_cbox: ComboBoxText,
+    input_channels_cbox: ComboBoxText,
+
+    output_device_cbox: ComboBoxText,
 }
 
 struct ChunkViewingUi<'a> {
@@ -173,6 +196,8 @@ impl Update for Win {
             ms_passed: 0,
             ms_total: 0,
             audio_status: ProcessingStatus::Stopped,
+
+            input_devices_info: None,
         }
     }
 
@@ -385,6 +410,142 @@ impl Update for Win {
 
                 goto_dialog.close();
             }
+            Msg::ChangeInputDevicePreference => {
+                let input_device_info = self.model.input_devices_info.as_ref().unwrap();
+                let selected_input_name = self
+                    .widgets
+                    .input_device_cbox
+                    .get_active_text()
+                    .unwrap()
+                    .to_string();
+
+                let input_channels = input_device_info
+                    .channels
+                    .get(&selected_input_name)
+                    .unwrap();
+                self.widgets.input_channels_cbox.remove_all();
+                self.widgets.input_channels_cbox.append_text("default");
+                for channel in input_channels {
+                    self.widgets
+                        .input_channels_cbox
+                        .append_text(&channel.to_string());
+                }
+                self.widgets.input_channels_cbox.set_active(Some(0));
+
+                let input_sample_rates = input_device_info
+                    .sample_rates
+                    .get(&selected_input_name)
+                    .unwrap();
+                self.widgets.input_sample_rate_cbox.remove_all();
+                self.widgets.input_sample_rate_cbox.append_text("default");
+                for sample_rate in input_sample_rates {
+                    self.widgets
+                        .input_sample_rate_cbox
+                        .append_text(&sample_rate.to_string());
+                }
+                self.widgets.input_sample_rate_cbox.set_active(Some(0));
+            }
+            Msg::OpenPreferences => {
+                // 1: Populate the available Input Devices
+                let input_devices = self.model.audio_processor.get_input_devices();
+                self.widgets.input_device_cbox.remove_all();
+                self.widgets.input_device_cbox.append_text("default");
+                for input_device in &input_devices {
+                    let input_device_name = input_device.name().unwrap();
+                    if input_device_name == "default" {
+                        continue;
+                    }
+
+                    self.widgets
+                        .input_device_cbox
+                        .append_text(&input_device_name);
+                }
+                self.widgets.input_device_cbox.set_active(Some(0));
+
+                // 2: Map all Channels and Sample Rates to their respective Input Device.
+                let mut input_channels: HashMap<String, Vec<ChannelCount>> = HashMap::new();
+                let mut input_sample_rates: HashMap<String, Vec<u32>> = HashMap::new();
+
+                input_devices.iter().for_each(|device| {
+                    let supported_configs = device.supported_input_configs().unwrap();
+
+                    let mut channels: Vec<ChannelCount> = Vec::new();
+                    let mut sample_rates: Vec<u32> = Vec::new();
+                    supported_configs.for_each(|config| {
+                        channels.push(config.channels());
+
+                        const SAMPLE_RATES: [u32; 6] = [16000, 32000, 44100, 48000, 88200, 96000];
+                        for sample_rate in SAMPLE_RATES.iter() {
+                            if *sample_rate >= config.min_sample_rate().0
+                                && *sample_rate <= config.max_sample_rate().0
+                            {
+                                sample_rates.push(*sample_rate);
+                            }
+                        }
+                    });
+                    channels.sort();
+                    channels.dedup();
+                    input_channels.insert(device.name().unwrap().clone(), channels);
+
+                    sample_rates.sort();
+                    sample_rates.dedup();
+                    input_sample_rates.insert(device.name().unwrap().clone(), sample_rates);
+                });
+
+                // 3: Show default's channels and sample rates
+                self.widgets.input_channels_cbox.remove_all();
+                self.widgets.input_channels_cbox.append_text("default");
+                input_channels
+                    .get("default")
+                    .unwrap()
+                    .iter()
+                    .for_each(|channel| {
+                        self.widgets
+                            .input_channels_cbox
+                            .append_text(&channel.to_string());
+                    });
+                self.widgets.input_channels_cbox.set_active(Some(0));
+
+                self.widgets.input_sample_rate_cbox.remove_all();
+                self.widgets.input_sample_rate_cbox.append_text("default");
+                input_sample_rates
+                    .get("default")
+                    .unwrap()
+                    .iter()
+                    .for_each(|sample_rate| {
+                        self.widgets
+                            .input_sample_rate_cbox
+                            .append_text(&sample_rate.to_string());
+                    });
+                self.widgets.input_sample_rate_cbox.set_active(Some(0));
+
+                // 4: Have mappings available when a user changes the input device.
+                self.model.input_devices_info = Some(InputDevicesInfo {
+                    channels: input_channels,
+                    sample_rates: input_sample_rates,
+                });
+
+                // 5: Populate the available Output Devices.
+                let output_devices = self.model.audio_processor.get_output_devices();
+                self.widgets.output_device_cbox.remove_all();
+                self.widgets.output_device_cbox.append_text("default");
+                for output_device in &output_devices {
+                    let output_device_name = output_device.name().unwrap();
+                    if output_device_name == "default" {
+                        continue;
+                    }
+
+                    self.widgets
+                        .output_device_cbox
+                        .append_text(&output_device_name);
+                }
+                self.widgets.output_device_cbox.set_active(Some(0));
+
+                // 6: Show the preferences dialog
+                self.widgets.preferences_dialog.show();
+
+                // 7: Determine if a new Output or Input Device must be created.
+            }
             Msg::LoadFile => {
                 let file_chooser = gtk::FileChooserDialog::new(
                     Some("Open File"),
@@ -548,9 +709,11 @@ impl Widget for Win {
         let window: Window = builder.get_object("window").unwrap();
         window.show_all();
 
+        // Main Window Widgets
         let chunk_progress_label: Label = builder.get_object("chunk_position_lbl").unwrap();
         let text_viewer: TextView = builder.get_object("chunk_view_txtviewer").unwrap();
 
+        // Media IO Items
         let prev_button: Button = builder.get_object("prev_chunk_btn").unwrap();
         let next_button: Button = builder.get_object("next_chunk_btn").unwrap();
         let stop_button: Button = builder.get_object("stop_btn").unwrap();
@@ -559,12 +722,27 @@ impl Widget for Win {
         let audio_progress_label: Label = builder.get_object("audio_progress_lbl").unwrap();
         let progress_bar: Scrollbar = builder.get_object("progress_bar").unwrap();
 
+        // Main Menu Items
         let open_menu_item: MenuItem = builder.get_object("open_menu").unwrap();
         let goto_menu_item: MenuItem = builder.get_object("goto_menu").unwrap();
+        let preferences_menu_item: MenuItem = builder.get_object("preferences_menu").unwrap();
         let about_menu_item: MenuItem = builder.get_object("about_menu").unwrap();
         let quit_menu_item: MenuItem = builder.get_object("close_menu").unwrap();
 
+        // Dialogs
         let about_dialog: AboutDialog = builder.get_object("about_dialog").unwrap();
+
+        // Preferences
+        let preferences_dialog: Dialog = builder.get_object("preferences_dialog").unwrap();
+        // General - Preferences
+        let project_file_chooser: FileChooser = builder.get_object("project_file_chooser").unwrap();
+        // Audio - Preferences
+        let input_device_cbox: ComboBoxText = builder.get_object("input_device_cbox").unwrap();
+        let input_sample_rate_cbox: ComboBoxText =
+            builder.get_object("input_sample_rate_cbox").unwrap();
+        let input_channels_cbox: ComboBoxText = builder.get_object("input_channels_cbox").unwrap();
+
+        let output_device_cbox: ComboBoxText = builder.get_object("output_device_cbox").unwrap();
 
         connect!(relm, prev_button, connect_clicked(_), Msg::Previous);
         connect!(relm, next_button, connect_clicked(_), Msg::Next);
@@ -581,6 +759,18 @@ impl Widget for Win {
 
         connect!(relm, open_menu_item, connect_activate(_), Msg::LoadFile);
         connect!(relm, goto_menu_item, connect_activate(_), Msg::JumpTo);
+        connect!(
+            relm,
+            preferences_menu_item,
+            connect_activate(_),
+            Msg::OpenPreferences
+        );
+        connect!(
+            relm,
+            input_device_cbox,
+            connect_changed(_),
+            Msg::ChangeInputDevicePreference
+        );
         connect!(relm, about_menu_item, connect_activate(_), Msg::About);
         connect!(quit_menu_item, connect_activate(_), relm, Msg::Quit);
 
@@ -589,6 +779,7 @@ impl Widget for Win {
             widgets: Widgets {
                 chunk_progress_label,
                 chunk_viewer: text_viewer,
+
                 previous_chunk_button: prev_button,
                 next_chunk_button: next_button,
                 stop_button,
@@ -596,12 +787,23 @@ impl Widget for Win {
                 play_button,
                 audio_progress_label,
                 progress_bar,
+
                 window,
+
                 open_menu_item,
                 goto_menu_item,
+                preferences_menu_item,
                 about_menu_item,
                 quit_menu_item,
+
                 about_dialog,
+
+                preferences_dialog,
+                project_file_chooser,
+                input_device_cbox,
+                input_sample_rate_cbox,
+                input_channels_cbox,
+                output_device_cbox,
             },
         }
     }

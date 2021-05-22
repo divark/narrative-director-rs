@@ -114,6 +114,12 @@ impl CpalAudioRecorder {
     pub fn stop(&mut self) {
         self.io_stream = None;
     }
+
+    pub fn get_input_devices(&self) -> Vec<Device> {
+        let host = default_host();
+
+        host.input_devices().unwrap().collect()
+    }
 }
 
 #[cfg(test)]

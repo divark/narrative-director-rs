@@ -2,6 +2,7 @@ use std::path::Path;
 
 use super::prelude::*;
 use crate::media_io::MediaProcessor;
+use cpal::Device;
 
 pub struct AudioIO {
     current_chunk_index: u64,
@@ -22,6 +23,14 @@ impl AudioIO {
             player: CpalAudioPlayer::new(),
             player_duration_ms: 0,
         }
+    }
+
+    pub fn get_input_devices(&self) -> Vec<Device> {
+        self.recorder.get_input_devices()
+    }
+
+    pub fn get_output_devices(&self) -> Vec<Device> {
+        self.player.get_output_devices()
     }
 }
 

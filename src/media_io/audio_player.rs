@@ -130,6 +130,12 @@ impl CpalAudioPlayer {
 
         duration
     }
+
+    pub fn get_output_devices(&self) -> Vec<Device> {
+        let host = default_host();
+
+        host.output_devices().unwrap().collect()
+    }
 }
 
 #[cfg(test)]
