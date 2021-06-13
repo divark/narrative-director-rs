@@ -1,4 +1,4 @@
-mod media_io;
+mod audio;
 mod text_grabber;
 
 use gtk::prelude::*;
@@ -10,10 +10,10 @@ use relm::{connect, interval, Relm, Update, Widget};
 use relm_derive::Msg;
 
 use crate::Msg::ProgressTick;
+use audio::prelude::*;
+use audio::ProcessingStatus;
 use cpal::traits::DeviceTrait;
 use cpal::ChannelCount;
-use media_io::prelude::*;
-use media_io::ProcessingStatus;
 use std::collections::HashMap;
 use std::fs::File;
 use text_grabber::{EnglishParagraphRetriever, TextGrabber};
@@ -40,6 +40,7 @@ struct Model {
     audio_status: ProcessingStatus,
 
     input_devices_info: Option<InputDevicesInfo>,
+    preferences_has_been_shown_once: bool,
 }
 
 /// Represents User Events that could take place
@@ -167,6 +168,38 @@ fn to_hh_mm_ss_str(ms: u32) -> String {
     format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
 }
 
+/// Populates the choices available for input devices
+fn populate_input_options(input_options: &mut ComboBoxText, audio_io: &AudioIO) {
+    let input_devices = audio_io.get_input_devices();
+    input_options.remove_all();
+    input_options.append_text("default");
+    for input_device in &input_devices {
+        let input_device_name = input_device.name().unwrap();
+        if input_device_name == "default" {
+            continue;
+        }
+
+        input_options.append_text(&input_device_name);
+    }
+    input_options.set_active(Some(0));
+}
+
+/// Populates the choices available for output devices
+fn populate_output_options(output_options: &mut ComboBoxText, audio_io: &AudioIO) {
+    let output_devices = audio_io.get_output_devices();
+    output_options.remove_all();
+    output_options.append_text("default");
+    for output_device in &output_devices {
+        let output_device_name = output_device.name().unwrap();
+        if output_device_name == "default" {
+            continue;
+        }
+
+        output_options.append_text(&output_device_name);
+    }
+    output_options.set_active(Some(0));
+}
+
 /// Abstracts the whole application, merging
 /// the Model and references to the View and Controller
 /// widgets.
@@ -198,6 +231,7 @@ impl Update for Win {
             audio_status: ProcessingStatus::Stopped,
 
             input_devices_info: None,
+            preferences_has_been_shown_once: false,
         }
     }
 
@@ -446,105 +480,136 @@ impl Update for Win {
                 self.widgets.input_sample_rate_cbox.set_active(Some(0));
             }
             Msg::OpenPreferences => {
-                // 1: Populate the available Input Devices
-                let input_devices = self.model.audio_processor.get_input_devices();
-                self.widgets.input_device_cbox.remove_all();
-                self.widgets.input_device_cbox.append_text("default");
-                for input_device in &input_devices {
-                    let input_device_name = input_device.name().unwrap();
-                    if input_device_name == "default" {
-                        continue;
-                    }
+                // 1: Map all Channels and Sample Rates to their respective Input Device if not
+                // already done.
+                if self.model.input_devices_info.is_none() {
+                    let input_devices = self.model.audio_processor.get_input_devices();
+                    let mut input_channels: HashMap<String, Vec<ChannelCount>> = HashMap::new();
+                    let mut input_sample_rates: HashMap<String, Vec<u32>> = HashMap::new();
 
-                    self.widgets
-                        .input_device_cbox
-                        .append_text(&input_device_name);
-                }
-                self.widgets.input_device_cbox.set_active(Some(0));
+                    input_devices.iter().for_each(|device| {
+                        let supported_configs = device.supported_input_configs().unwrap();
 
-                // 2: Map all Channels and Sample Rates to their respective Input Device.
-                let mut input_channels: HashMap<String, Vec<ChannelCount>> = HashMap::new();
-                let mut input_sample_rates: HashMap<String, Vec<u32>> = HashMap::new();
+                        let mut channels: Vec<ChannelCount> = Vec::new();
+                        let mut sample_rates: Vec<u32> = Vec::new();
+                        supported_configs.for_each(|config| {
+                            channels.push(config.channels());
 
-                input_devices.iter().for_each(|device| {
-                    let supported_configs = device.supported_input_configs().unwrap();
-
-                    let mut channels: Vec<ChannelCount> = Vec::new();
-                    let mut sample_rates: Vec<u32> = Vec::new();
-                    supported_configs.for_each(|config| {
-                        channels.push(config.channels());
-
-                        const SAMPLE_RATES: [u32; 6] = [16000, 32000, 44100, 48000, 88200, 96000];
-                        for sample_rate in SAMPLE_RATES.iter() {
-                            if *sample_rate >= config.min_sample_rate().0
-                                && *sample_rate <= config.max_sample_rate().0
-                            {
-                                sample_rates.push(*sample_rate);
+                            const SAMPLE_RATES: [u32; 6] =
+                                [16000, 32000, 44100, 48000, 88200, 96000];
+                            for sample_rate in SAMPLE_RATES.iter() {
+                                if *sample_rate >= config.min_sample_rate().0
+                                    && *sample_rate <= config.max_sample_rate().0
+                                {
+                                    sample_rates.push(*sample_rate);
+                                }
                             }
-                        }
+                        });
+                        channels.sort_unstable();
+                        channels.dedup();
+                        input_channels.insert(device.name().unwrap(), channels);
+
+                        sample_rates.sort_unstable();
+                        sample_rates.dedup();
+                        input_sample_rates.insert(device.name().unwrap(), sample_rates);
                     });
-                    channels.sort();
-                    channels.dedup();
-                    input_channels.insert(device.name().unwrap().clone(), channels);
 
-                    sample_rates.sort();
-                    sample_rates.dedup();
-                    input_sample_rates.insert(device.name().unwrap().clone(), sample_rates);
-                });
+                    // 2: Show default's channels and sample rates
+                    self.widgets.input_channels_cbox.remove_all();
+                    self.widgets.input_channels_cbox.append_text("default");
+                    input_channels
+                        .get("default")
+                        .unwrap()
+                        .iter()
+                        .for_each(|channel| {
+                            self.widgets
+                                .input_channels_cbox
+                                .append_text(&channel.to_string());
+                        });
+                    self.widgets.input_channels_cbox.set_active(Some(0));
 
-                // 3: Show default's channels and sample rates
-                self.widgets.input_channels_cbox.remove_all();
-                self.widgets.input_channels_cbox.append_text("default");
-                input_channels
-                    .get("default")
-                    .unwrap()
-                    .iter()
-                    .for_each(|channel| {
-                        self.widgets
-                            .input_channels_cbox
-                            .append_text(&channel.to_string());
+                    self.widgets.input_sample_rate_cbox.remove_all();
+                    self.widgets.input_sample_rate_cbox.append_text("default");
+                    input_sample_rates
+                        .get("default")
+                        .unwrap()
+                        .iter()
+                        .for_each(|sample_rate| {
+                            self.widgets
+                                .input_sample_rate_cbox
+                                .append_text(&sample_rate.to_string());
+                        });
+                    self.widgets.input_sample_rate_cbox.set_active(Some(0));
+
+                    // 3: Have mappings available when a user changes the input device.
+                    self.model.input_devices_info = Some(InputDevicesInfo {
+                        channels: input_channels,
+                        sample_rates: input_sample_rates,
                     });
-                self.widgets.input_channels_cbox.set_active(Some(0));
-
-                self.widgets.input_sample_rate_cbox.remove_all();
-                self.widgets.input_sample_rate_cbox.append_text("default");
-                input_sample_rates
-                    .get("default")
-                    .unwrap()
-                    .iter()
-                    .for_each(|sample_rate| {
-                        self.widgets
-                            .input_sample_rate_cbox
-                            .append_text(&sample_rate.to_string());
-                    });
-                self.widgets.input_sample_rate_cbox.set_active(Some(0));
-
-                // 4: Have mappings available when a user changes the input device.
-                self.model.input_devices_info = Some(InputDevicesInfo {
-                    channels: input_channels,
-                    sample_rates: input_sample_rates,
-                });
-
-                // 5: Populate the available Output Devices.
-                let output_devices = self.model.audio_processor.get_output_devices();
-                self.widgets.output_device_cbox.remove_all();
-                self.widgets.output_device_cbox.append_text("default");
-                for output_device in &output_devices {
-                    let output_device_name = output_device.name().unwrap();
-                    if output_device_name == "default" {
-                        continue;
-                    }
-
-                    self.widgets
-                        .output_device_cbox
-                        .append_text(&output_device_name);
                 }
-                self.widgets.output_device_cbox.set_active(Some(0));
 
-                // 6: Show the preferences dialog
-                self.widgets.preferences_dialog.show();
+                // 4: Show the preferences dialog
+                if !self.model.preferences_has_been_shown_once {
+                    self.widgets
+                        .preferences_dialog
+                        .add_buttons(&[("Ok", ResponseType::Ok), ("Cancel", ResponseType::Cancel)]);
+                    self.model.preferences_has_been_shown_once = true;
+                }
+                self.widgets
+                    .preferences_dialog
+                    .set_default_response(ResponseType::Ok);
 
-                // 7: Determine if a new Output or Input Device must be created.
+                // 5: Determine if a new Output or Input Device must be created.
+                let preference_response = self.widgets.preferences_dialog.run();
+                if preference_response == ResponseType::Ok {
+                    let sample_rate_choice = self
+                        .widgets
+                        .input_sample_rate_cbox
+                        .get_active_text()
+                        .unwrap()
+                        .to_string();
+                    let sample_rate = if sample_rate_choice == "default" {
+                        0
+                    } else {
+                        sample_rate_choice.parse::<u32>().unwrap()
+                    };
+
+                    let channel_choice = self
+                        .widgets
+                        .input_channels_cbox
+                        .get_active_text()
+                        .unwrap()
+                        .to_string();
+                    let num_channels = if channel_choice == "default" {
+                        0
+                    } else {
+                        channel_choice.parse::<u16>().unwrap()
+                    };
+
+                    let input_info = InputDeviceInfo {
+                        name: self
+                            .widgets
+                            .input_device_cbox
+                            .get_active_text()
+                            .unwrap()
+                            .to_string(),
+                        sample_rate,
+                        num_channels,
+                    };
+
+                    let output_info = OutputDeviceInfo {
+                        name: self
+                            .widgets
+                            .output_device_cbox
+                            .get_active_text()
+                            .unwrap()
+                            .to_string(),
+                    };
+
+                    self.model.audio_processor.set_input_device(input_info);
+                    self.model.audio_processor.set_output_device(output_info);
+                }
+                self.widgets.preferences_dialog.hide();
             }
             Msg::LoadFile => {
                 let file_chooser = gtk::FileChooserDialog::new(
@@ -737,12 +802,16 @@ impl Widget for Win {
         // General - Preferences
         let project_file_chooser: FileChooser = builder.get_object("project_file_chooser").unwrap();
         // Audio - Preferences
-        let input_device_cbox: ComboBoxText = builder.get_object("input_device_cbox").unwrap();
+        let mut input_device_cbox: ComboBoxText = builder.get_object("input_device_cbox").unwrap();
+        populate_input_options(&mut input_device_cbox, &model.audio_processor);
+
         let input_sample_rate_cbox: ComboBoxText =
             builder.get_object("input_sample_rate_cbox").unwrap();
         let input_channels_cbox: ComboBoxText = builder.get_object("input_channels_cbox").unwrap();
 
-        let output_device_cbox: ComboBoxText = builder.get_object("output_device_cbox").unwrap();
+        let mut output_device_cbox: ComboBoxText =
+            builder.get_object("output_device_cbox").unwrap();
+        populate_output_options(&mut output_device_cbox, &model.audio_processor);
 
         connect!(relm, prev_button, connect_clicked(_), Msg::Previous);
         connect!(relm, next_button, connect_clicked(_), Msg::Next);

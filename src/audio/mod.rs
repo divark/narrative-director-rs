@@ -21,6 +21,16 @@ pub mod prelude {
         New,
     }
 
+    pub struct InputDeviceInfo {
+        pub name: String,
+        pub sample_rate: u32,
+        pub num_channels: u16,
+    }
+
+    pub struct OutputDeviceInfo {
+        pub name: String,
+    }
+
     pub trait MediaProcessor {
         // Starts playing media from some file
         fn play(&mut self) -> Result<ProcessingStatus, String>;

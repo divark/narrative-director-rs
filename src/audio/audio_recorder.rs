@@ -1,5 +1,5 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{default_host, Device, SampleFormat, Stream, SupportedStreamConfig};
+use cpal::{default_host, Device, SampleFormat, SampleRate, Stream, SupportedStreamConfig};
 use hound::{WavSpec, WavWriter};
 use std::fs::File;
 use std::io::BufWriter;
@@ -37,6 +37,35 @@ fn wav_spec_from_config(config: &cpal::SupportedStreamConfig) -> hound::WavSpec 
         bits_per_sample: (config.sample_format().sample_size() * 8) as _,
         sample_format: sample_format(config.sample_format()),
     }
+}
+
+fn device_config_from_sample_and_channels(
+    device: &Device,
+    sample_rate: u32,
+    num_channels: u16,
+) -> SupportedStreamConfig {
+    if sample_rate == 0 && num_channels == 0 {
+        return device.default_input_config().unwrap();
+    }
+
+    let chosen_sample_rate = if sample_rate > 0 {
+        sample_rate
+    } else {
+        device.default_input_config().unwrap().sample_rate().0
+    };
+
+    let chosen_num_channels = if num_channels > 0 {
+        num_channels
+    } else {
+        device.default_input_config().unwrap().channels()
+    };
+
+    device
+        .supported_input_configs()
+        .unwrap()
+        .find(|config| config.channels() == chosen_num_channels)
+        .expect("Could not find a device config with given sample rate and channels.")
+        .with_sample_rate(SampleRate(chosen_sample_rate))
 }
 
 pub struct CpalAudioRecorder {
@@ -120,11 +149,22 @@ impl CpalAudioRecorder {
 
         host.input_devices().unwrap().collect()
     }
+
+    pub fn set_input_device(
+        &mut self,
+        new_input_device: Device,
+        sample_rate: u32,
+        num_channels: u16,
+    ) {
+        self.config =
+            device_config_from_sample_and_channels(&new_input_device, sample_rate, num_channels);
+        self.input_device = new_input_device;
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::media_io::audio_recorder::CpalAudioRecorder;
+    use crate::audio::audio_recorder::CpalAudioRecorder;
     use std::fs;
     use std::thread::sleep;
     use std::time::Duration;

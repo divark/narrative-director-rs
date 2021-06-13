@@ -6,6 +6,7 @@ use std::path::Path;
 pub struct CpalAudioPlayer {
     output_device: Device,
     output_stream: Option<Stream>,
+
     output_duration_ms: u32,
     output_paused_pos_ms: u32,
 }
@@ -136,11 +137,15 @@ impl CpalAudioPlayer {
 
         host.output_devices().unwrap().collect()
     }
+
+    pub fn set_output_device(&mut self, new_output_device: Device) {
+        self.output_device = new_output_device;
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::media_io::audio_player::CpalAudioPlayer;
+    use crate::audio::audio_player::CpalAudioPlayer;
     use std::thread::sleep;
     use std::time::Duration;
 

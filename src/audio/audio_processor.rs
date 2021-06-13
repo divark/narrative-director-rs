@@ -1,8 +1,9 @@
 use std::path::Path;
 
 use super::prelude::*;
-use crate::media_io::MediaProcessor;
-use cpal::Device;
+use crate::audio::MediaProcessor;
+use cpal::traits::{DeviceTrait, HostTrait};
+use cpal::{default_host, Device};
 
 pub struct AudioIO {
     current_chunk_index: u64,
@@ -27,6 +28,38 @@ impl AudioIO {
 
     pub fn get_input_devices(&self) -> Vec<Device> {
         self.recorder.get_input_devices()
+    }
+
+    pub fn set_input_device(&mut self, input_info: InputDeviceInfo) {
+        let new_input_device = if input_info.name == "default" {
+            default_host().default_input_device().unwrap()
+        } else {
+            default_host()
+                .input_devices()
+                .unwrap()
+                .find(|input| input.name().unwrap() == input_info.name)
+                .expect("Could not find input device")
+        };
+
+        self.recorder.set_input_device(
+            new_input_device,
+            input_info.sample_rate,
+            input_info.num_channels,
+        );
+    }
+
+    pub fn set_output_device(&mut self, output_info: OutputDeviceInfo) {
+        let new_output_device = if output_info.name == "default" {
+            default_host().default_output_device().unwrap()
+        } else {
+            default_host()
+                .output_devices()
+                .unwrap()
+                .find(|output_device| output_device.name().unwrap() == output_info.name)
+                .unwrap()
+        };
+
+        self.player.set_output_device(new_output_device);
     }
 
     pub fn get_output_devices(&self) -> Vec<Device> {
