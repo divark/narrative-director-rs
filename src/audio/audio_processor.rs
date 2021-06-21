@@ -9,17 +9,19 @@ pub struct AudioIO {
     current_chunk_index: u64,
     total_num_chunks: usize,
 
+    project_location: String,
     recorder: CpalAudioRecorder,
     player: CpalAudioPlayer,
     player_duration_ms: u32,
 }
 
 impl AudioIO {
-    pub fn new(num_chunks: usize) -> Self {
+    pub fn new(num_chunks: usize, project_location: String) -> Self {
         Self {
             current_chunk_index: 0,
             total_num_chunks: num_chunks,
 
+            project_location,
             recorder: CpalAudioRecorder::new(),
             player: CpalAudioPlayer::new(),
             player_duration_ms: 0,
@@ -69,10 +71,13 @@ impl AudioIO {
 
 impl MediaProcessor for AudioIO {
     fn play(&mut self) -> Result<ProcessingStatus, String> {
-        match self
-            .player
-            .play(format!("part{}.wav", self.current_chunk_index))
-        {
+        let project_path = Path::new(&self.project_location);
+        let play_path = project_path
+            .join(format!("part{}.wav", self.current_chunk_index))
+            .to_str()
+            .unwrap()
+            .to_string();
+        match self.player.play(play_path) {
             Ok(audio_duration) => {
                 self.player_duration_ms = audio_duration;
                 Ok(ProcessingStatus::Playing)
@@ -96,13 +101,16 @@ impl MediaProcessor for AudioIO {
     }
 
     fn skip_to(&mut self, pos_ms: u32) -> Result<ProcessingStatus, String> {
-        let input_file = format!("part{}.wav", self.current_chunk_index);
-        let input_path = Path::new(&input_file);
+        let project_path = Path::new(&self.project_location);
+        let input_path = project_path.join(format!("part{}.wav", self.current_chunk_index));
         if !input_path.exists() {
             return Err("AudioIO skip_to error: File does not exist.".to_string());
         }
 
-        match self.player.play_at(input_file.clone(), pos_ms) {
+        match self
+            .player
+            .play_at(input_path.to_str().unwrap().to_string(), pos_ms)
+        {
             Ok(duration_ms) => {
                 self.player_duration_ms = duration_ms;
                 Ok(ProcessingStatus::Playing)
@@ -121,10 +129,12 @@ impl MediaProcessor for AudioIO {
 
         self.current_chunk_index += 1;
 
-        let input_file = format!("part{}.wav", self.current_chunk_index);
-        let input_path = Path::new(&input_file);
+        let project_path = Path::new(&self.project_location);
+        let input_path = project_path.join(format!("part{}.wav", self.current_chunk_index));
         if input_path.exists() {
-            self.player_duration_ms = self.player.duration_of(input_file.clone());
+            self.player_duration_ms = self
+                .player
+                .duration_of(input_path.to_str().unwrap().to_string());
             return Ok(FileStatus::Exists);
         }
 
@@ -141,10 +151,12 @@ impl MediaProcessor for AudioIO {
 
         self.current_chunk_index -= 1;
 
-        let input_file = format!("part{}.wav", self.current_chunk_index);
-        let input_path = Path::new(&input_file);
+        let project_path = Path::new(&self.project_location);
+        let input_path = project_path.join(format!("part{}.wav", self.current_chunk_index));
         if input_path.exists() {
-            self.player_duration_ms = self.player.duration_of(input_file.clone());
+            self.player_duration_ms = self
+                .player
+                .duration_of(input_path.to_str().unwrap().to_string());
             return Ok(FileStatus::Exists);
         }
 
@@ -161,10 +173,12 @@ impl MediaProcessor for AudioIO {
 
         self.current_chunk_index = idx as u64;
 
-        let input_file = format!("part{}.wav", self.current_chunk_index);
-        let input_path = Path::new(&input_file);
+        let project_path = Path::new(&self.project_location);
+        let input_path = project_path.join(format!("part{}.wav", self.current_chunk_index));
         if input_path.exists() {
-            self.player_duration_ms = self.player.duration_of(input_file.clone());
+            self.player_duration_ms = self
+                .player
+                .duration_of(input_path.to_str().unwrap().to_string());
             return Ok(FileStatus::Exists);
         }
 
@@ -172,10 +186,13 @@ impl MediaProcessor for AudioIO {
     }
 
     fn record(&mut self) -> Result<ProcessingStatus, String> {
-        if let Err(msg) = self
-            .recorder
-            .record(format!("part{}.wav", self.current_chunk_index))
-        {
+        let project_path = Path::new(&self.project_location);
+        let record_path = project_path
+            .join(format!("part{}.wav", self.current_chunk_index))
+            .to_str()
+            .unwrap()
+            .to_string();
+        if let Err(msg) = self.recorder.record(record_path) {
             return Err(format!("AudioIO record error: {}", msg));
         }
 

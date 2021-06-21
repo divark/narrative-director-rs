@@ -15,7 +15,9 @@ use audio::ProcessingStatus;
 use cpal::traits::DeviceTrait;
 use cpal::ChannelCount;
 use std::collections::HashMap;
-use std::fs::File;
+use std::fs;
+use std::fs::{DirBuilder, File};
+use std::path::Path;
 use text_grabber::{EnglishParagraphRetriever, TextGrabber};
 
 struct InputDevicesInfo {
@@ -41,6 +43,8 @@ struct Model {
 
     input_devices_info: Option<InputDevicesInfo>,
     preferences_has_been_shown_once: bool,
+    current_filename: String,
+    project_directory: String,
 }
 
 /// Represents User Events that could take place
@@ -159,6 +163,19 @@ fn change_play_button_sensitivity(file_status: FileStatus, play_button: &Button)
     }
 }
 
+/// Populates Start and End time of current chunk if it exists.
+fn reset_progress_bar_info(file_status: FileStatus, model: &mut Model, widgets: &Widgets) {
+    change_play_button_sensitivity(file_status, &widgets.play_button);
+
+    model.ms_passed = 0;
+    model.ms_total = model.audio_processor.duration();
+
+    let secs_total = (model.ms_total / 1000) as f64;
+    widgets
+        .progress_bar
+        .set_adjustment(&Adjustment::new(0.0, 0.0, secs_total, 1.0, 1.0, 1.0));
+}
+
 /// Converts ms to hours:minutes:seconds format
 fn to_hh_mm_ss_str(ms: u32) -> String {
     let seconds = ms / 1000;
@@ -219,19 +236,27 @@ impl Update for Win {
 
     fn model(_: &Relm<Self>, _: ()) -> Model {
         let chunk_retriever = EnglishParagraphRetriever::new();
+        let project_directory = dirs::home_dir()
+            .unwrap()
+            .join("ND_Projects")
+            .to_str()
+            .unwrap()
+            .to_string();
 
         Model {
             chunk_retriever,
             chunk_number: 0,
             chunk_total: 0,
 
-            audio_processor: AudioIO::new(0),
+            audio_processor: AudioIO::new(0, project_directory.clone()),
             ms_passed: 0,
             ms_total: 0,
             audio_status: ProcessingStatus::Stopped,
 
             input_devices_info: None,
             preferences_has_been_shown_once: false,
+            current_filename: String::new(),
+            project_directory,
         }
     }
 
@@ -608,6 +633,29 @@ impl Update for Win {
 
                     self.model.audio_processor.set_input_device(input_info);
                     self.model.audio_processor.set_output_device(output_info);
+
+                    let project_path = self.widgets.project_file_chooser.get_filename().unwrap();
+
+                    let new_directory = project_path.join(&self.model.current_filename);
+                    if !new_directory.is_dir() {
+                        let mut dir_builder = DirBuilder::new();
+                        dir_builder.recursive(true);
+
+                        dir_builder.create(new_directory.clone()).unwrap();
+                    }
+
+                    self.model.project_directory = project_path.to_str().unwrap().to_string();
+                    self.model.audio_processor = AudioIO::new(
+                        self.model.chunk_total as usize,
+                        new_directory.to_str().unwrap().to_string(),
+                    );
+
+                    let file_status = self
+                        .model
+                        .audio_processor
+                        .go_to(self.model.chunk_number as usize)
+                        .unwrap();
+                    reset_progress_bar_info(file_status, &mut self.model, &self.widgets);
                 }
                 self.widgets.preferences_dialog.hide();
             }
@@ -643,27 +691,36 @@ impl Update for Win {
 
                     self.model.chunk_number = 0;
                     self.model.chunk_total = num_paragraphs;
-                    self.model.audio_processor = AudioIO::new(self.model.chunk_total as usize);
+
+                    let project_path = Path::new(&self.model.project_directory)
+                        .join(filename.file_stem().unwrap());
+                    if !project_path.is_dir() {
+                        let mut dir_builder = DirBuilder::new();
+                        dir_builder.recursive(true);
+
+                        dir_builder.create(project_path.clone()).unwrap();
+                    }
+
+                    self.model.current_filename =
+                        filename.file_stem().unwrap().to_str().unwrap().to_string();
+
+                    self.model.audio_processor = AudioIO::new(
+                        self.model.chunk_total as usize,
+                        project_path.to_str().unwrap().to_string(),
+                    );
                     show_chunk(0, &self.model.chunk_retriever, paragraph_ui).unwrap();
 
-                    self.widgets.next_chunk_button.set_sensitive(true);
+                    change_next_button_sensitivity(
+                        self.model.chunk_number,
+                        self.model.chunk_total,
+                        &self.widgets.next_chunk_button,
+                    );
+
                     self.widgets.goto_menu_item.set_sensitive(true);
                     self.widgets.record_button.set_sensitive(true);
 
-                    if let Ok(file_status) = self
-                        .model
-                        .audio_processor
-                        .go_to(self.model.chunk_number as usize)
-                    {
-                        change_play_button_sensitivity(file_status, &self.widgets.play_button);
-
-                        self.model.ms_passed = 0;
-                        self.model.ms_total = self.model.audio_processor.duration();
-
-                        let secs_total = (self.model.ms_total / 1000) as f64;
-                        progress_bar
-                            .set_adjustment(&Adjustment::new(0.0, 0.0, secs_total, 1.0, 1.0, 1.0));
-                    }
+                    let file_status = self.model.audio_processor.go_to(0).unwrap();
+                    reset_progress_bar_info(file_status, &mut self.model, &self.widgets);
                 }
 
                 file_chooser.close();
@@ -801,6 +858,12 @@ impl Widget for Win {
         let preferences_dialog: Dialog = builder.get_object("preferences_dialog").unwrap();
         // General - Preferences
         let project_file_chooser: FileChooser = builder.get_object("project_file_chooser").unwrap();
+        let home_directory = dirs::home_dir().unwrap().join("ND_Projects");
+        let project_path = Path::new(home_directory.as_path());
+        if !project_path.is_dir() {
+            fs::create_dir(project_path).unwrap();
+        }
+        project_file_chooser.set_current_folder(project_path);
         // Audio - Preferences
         let mut input_device_cbox: ComboBoxText = builder.get_object("input_device_cbox").unwrap();
         populate_input_options(&mut input_device_cbox, &model.audio_processor);
