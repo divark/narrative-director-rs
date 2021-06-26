@@ -1,5 +1,7 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{default_host, Device, SampleFormat, SampleRate, Stream, SupportedStreamConfig, ChannelCount};
+use cpal::{
+    default_host, ChannelCount, Device, SampleFormat, SampleRate, Stream, SupportedStreamConfig,
+};
 use hound::{WavSpec, WavWriter};
 use std::fs::File;
 use std::io::BufWriter;
@@ -146,7 +148,7 @@ impl CpalAudioRecorder {
 
         // 2: Filter by channel count
         supported_configs.for_each(|config| {
-           found_channels.push(config.channels());
+            found_channels.push(config.channels());
         });
 
         found_channels.sort_unstable();
@@ -279,9 +281,9 @@ mod tests {
         assert!(!input_sample_rates.is_empty());
 
         const SAMPLE_RATES: [u32; 6] = [16000, 32000, 44100, 48000, 88200, 96000];
-        let has_valid_sample_rate = input_sample_rates.iter().any(|sample_rate| {
-            SAMPLE_RATES.contains(sample_rate)
-        });
+        let has_valid_sample_rate = input_sample_rates
+            .iter()
+            .any(|sample_rate| SAMPLE_RATES.contains(sample_rate));
 
         assert!(has_valid_sample_rate);
     }

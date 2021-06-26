@@ -3,7 +3,7 @@ use std::path::Path;
 use super::prelude::*;
 use crate::audio::MediaProcessor;
 use cpal::traits::{DeviceTrait, HostTrait};
-use cpal::{default_host, Device, ChannelCount};
+use cpal::{default_host, ChannelCount, Device};
 
 pub struct AudioIO {
     current_chunk_index: u64,
