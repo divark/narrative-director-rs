@@ -3,7 +3,7 @@ use std::path::Path;
 use super::prelude::*;
 use crate::audio::MediaProcessor;
 use cpal::traits::{DeviceTrait, HostTrait};
-use cpal::{default_host, Device};
+use cpal::{default_host, Device, ChannelCount};
 
 pub struct AudioIO {
     current_chunk_index: u64,
@@ -32,7 +32,19 @@ impl AudioIO {
         self.recorder.get_input_devices()
     }
 
-    pub fn set_input_device(&mut self, input_info: InputDeviceInfo) {
+    pub fn get_input_device(&self) -> &Device {
+        self.recorder.get_input_device()
+    }
+
+    pub fn get_input_channels_for(&self, input_device: &Device) -> Vec<ChannelCount> {
+        self.recorder.get_channels_for_device(input_device)
+    }
+
+    pub fn get_input_sample_rates_for(&self, input_device: &Device) -> Vec<u32> {
+        self.recorder.get_sample_rates_for_device(input_device)
+    }
+
+    pub fn set_input_device(&mut self, input_info: InputDeviceSelection) {
         let new_input_device = if input_info.name == "default" {
             default_host().default_input_device().unwrap()
         } else {

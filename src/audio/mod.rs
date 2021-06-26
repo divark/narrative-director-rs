@@ -21,7 +21,7 @@ pub mod prelude {
         New,
     }
 
-    pub struct InputDeviceInfo {
+    pub struct InputDeviceSelection {
         pub name: String,
         pub sample_rate: u32,
         pub num_channels: u16,

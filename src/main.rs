@@ -13,7 +13,7 @@ use crate::Msg::ProgressTick;
 use audio::prelude::*;
 use audio::ProcessingStatus;
 use cpal::traits::DeviceTrait;
-use cpal::ChannelCount;
+use cpal::{ChannelCount, Device};
 use std::collections::HashMap;
 use std::fs;
 use std::fs::{DirBuilder, File};
@@ -63,7 +63,6 @@ enum Msg {
     JumpTo,
     LoadFile,
     OpenPreferences,
-    ChangeInputDevicePreference,
     About,
     Quit,
 }
@@ -189,12 +188,8 @@ fn to_hh_mm_ss_str(ms: u32) -> String {
 fn populate_input_options(input_options: &mut ComboBoxText, audio_io: &AudioIO) {
     let input_devices = audio_io.get_input_devices();
     input_options.remove_all();
-    input_options.append_text("default");
     for input_device in &input_devices {
         let input_device_name = input_device.name().unwrap();
-        if input_device_name == "default" {
-            continue;
-        }
 
         input_options.append_text(&input_device_name);
     }
@@ -205,16 +200,62 @@ fn populate_input_options(input_options: &mut ComboBoxText, audio_io: &AudioIO) 
 fn populate_output_options(output_options: &mut ComboBoxText, audio_io: &AudioIO) {
     let output_devices = audio_io.get_output_devices();
     output_options.remove_all();
-    output_options.append_text("default");
     for output_device in &output_devices {
         let output_device_name = output_device.name().unwrap();
-        if output_device_name == "default" {
-            continue;
-        }
 
         output_options.append_text(&output_device_name);
     }
     output_options.set_active(Some(0));
+}
+
+/// Populates fields for given Input Device
+fn populate_input_preference_fields(input_device: &Device, model: &Model, widgets: &mut Widgets) {
+    // Starting with the channels
+    widgets.input_channels_cbox.remove_all();
+    let input_device_channels = model.input_devices_info
+        .as_ref()
+        .unwrap()
+        .channels
+        .get(&input_device.name().unwrap())
+        .unwrap();
+
+    for default_input_channel in input_device_channels {
+        widgets.input_channels_cbox.append_text(&default_input_channel.to_string());
+    }
+
+    // Setting the combo box to point to the value of the default channel.
+    let current_channel_pos = input_device_channels.iter().position(|channel| {
+        input_device
+            .default_input_config()
+            .unwrap()
+            .channels() == *channel
+    }).unwrap() as u32;
+
+    widgets.input_channels_cbox.set_active(Some(current_channel_pos));
+
+    // Then the sample rates
+    widgets.input_sample_rate_cbox.remove_all();
+    let input_device_sample_rates = model.input_devices_info
+        .as_ref()
+        .unwrap()
+        .sample_rates
+        .get(&input_device.name().unwrap())
+        .unwrap();
+
+    for default_input_sample_rate in input_device_sample_rates {
+        widgets.input_sample_rate_cbox.append_text(&default_input_sample_rate.to_string());
+    }
+
+    // Setting the combo box to point to the value of the default sample rate..
+    let current_sample_rate_pos = input_device_sample_rates.iter().position(|sample_rate| {
+        input_device
+            .default_input_config()
+            .unwrap()
+            .sample_rate()
+            .0 == *sample_rate
+    }).unwrap() as u32;
+
+    widgets.input_sample_rate_cbox.set_active(Some(current_sample_rate_pos));
 }
 
 /// Abstracts the whole application, merging
@@ -469,111 +510,32 @@ impl Update for Win {
 
                 goto_dialog.close();
             }
-            Msg::ChangeInputDevicePreference => {
-                let input_device_info = self.model.input_devices_info.as_ref().unwrap();
-                let selected_input_name = self
-                    .widgets
-                    .input_device_cbox
-                    .get_active_text()
-                    .unwrap()
-                    .to_string();
-
-                let input_channels = input_device_info
-                    .channels
-                    .get(&selected_input_name)
-                    .unwrap();
-                self.widgets.input_channels_cbox.remove_all();
-                self.widgets.input_channels_cbox.append_text("default");
-                for channel in input_channels {
-                    self.widgets
-                        .input_channels_cbox
-                        .append_text(&channel.to_string());
-                }
-                self.widgets.input_channels_cbox.set_active(Some(0));
-
-                let input_sample_rates = input_device_info
-                    .sample_rates
-                    .get(&selected_input_name)
-                    .unwrap();
-                self.widgets.input_sample_rate_cbox.remove_all();
-                self.widgets.input_sample_rate_cbox.append_text("default");
-                for sample_rate in input_sample_rates {
-                    self.widgets
-                        .input_sample_rate_cbox
-                        .append_text(&sample_rate.to_string());
-                }
-                self.widgets.input_sample_rate_cbox.set_active(Some(0));
-            }
             Msg::OpenPreferences => {
-                // 1: Map all Channels and Sample Rates to their respective Input Device if not
+                // Map all Channels and Sample Rates to their respective Input Device if not
                 // already done.
                 if self.model.input_devices_info.is_none() {
-                    let input_devices = self.model.audio_processor.get_input_devices();
+                    // Save Sample Rates and Channels for each known Input Device
                     let mut input_channels: HashMap<String, Vec<ChannelCount>> = HashMap::new();
                     let mut input_sample_rates: HashMap<String, Vec<u32>> = HashMap::new();
 
-                    input_devices.iter().for_each(|device| {
-                        let supported_configs = device.supported_input_configs().unwrap();
+                    let input_devices = self.model.audio_processor.get_input_devices();
+                    for input_device in input_devices {
+                        input_channels.insert(input_device.name().unwrap(), self.model.audio_processor.get_input_channels_for(&input_device));
+                        input_sample_rates.insert(input_device.name().unwrap(), self.model.audio_processor.get_input_sample_rates_for(&input_device));
+                    }
 
-                        let mut channels: Vec<ChannelCount> = Vec::new();
-                        let mut sample_rates: Vec<u32> = Vec::new();
-                        supported_configs.for_each(|config| {
-                            channels.push(config.channels());
-
-                            const SAMPLE_RATES: [u32; 6] =
-                                [16000, 32000, 44100, 48000, 88200, 96000];
-                            for sample_rate in SAMPLE_RATES.iter() {
-                                if *sample_rate >= config.min_sample_rate().0
-                                    && *sample_rate <= config.max_sample_rate().0
-                                {
-                                    sample_rates.push(*sample_rate);
-                                }
-                            }
-                        });
-                        channels.sort_unstable();
-                        channels.dedup();
-                        input_channels.insert(device.name().unwrap(), channels);
-
-                        sample_rates.sort_unstable();
-                        sample_rates.dedup();
-                        input_sample_rates.insert(device.name().unwrap(), sample_rates);
-                    });
-
-                    // 2: Show default's channels and sample rates
-                    self.widgets.input_channels_cbox.remove_all();
-                    self.widgets.input_channels_cbox.append_text("default");
-                    input_channels
-                        .get("default")
-                        .unwrap()
-                        .iter()
-                        .for_each(|channel| {
-                            self.widgets
-                                .input_channels_cbox
-                                .append_text(&channel.to_string());
-                        });
-                    self.widgets.input_channels_cbox.set_active(Some(0));
-
-                    self.widgets.input_sample_rate_cbox.remove_all();
-                    self.widgets.input_sample_rate_cbox.append_text("default");
-                    input_sample_rates
-                        .get("default")
-                        .unwrap()
-                        .iter()
-                        .for_each(|sample_rate| {
-                            self.widgets
-                                .input_sample_rate_cbox
-                                .append_text(&sample_rate.to_string());
-                        });
-                    self.widgets.input_sample_rate_cbox.set_active(Some(0));
-
-                    // 3: Have mappings available when a user changes the input device.
                     self.model.input_devices_info = Some(InputDevicesInfo {
                         channels: input_channels,
                         sample_rates: input_sample_rates,
                     });
+
+                    // Populate UI from current input device (The default device)
+                    let default_input_device = self.model.audio_processor.get_input_device();
+
+                    populate_input_preference_fields(default_input_device, &self.model, &mut self.widgets);
                 }
 
-                // 4: Show the preferences dialog
+                // Show the preferences dialog
                 if !self.model.preferences_has_been_shown_once {
                     self.widgets
                         .preferences_dialog
@@ -584,7 +546,19 @@ impl Update for Win {
                     .preferences_dialog
                     .set_default_response(ResponseType::Ok);
 
-                // 5: Determine if a new Output or Input Device must be created.
+                // Determine if a new Output or Input Device must be created.
+
+                // Capture current positions of input fields if cancelled
+                let current_input_device_pos = self.widgets.input_device_cbox.get_active();
+                let current_input_channels_pos = self.widgets.input_channels_cbox.get_active();
+                let current_input_sample_rate_pos = self.widgets.input_sample_rate_cbox.get_active();
+
+                // Now the output fields
+                let current_output_device_pos = self.widgets.output_device_cbox.get_active();
+
+                // Finally, the general fields (Project folder location, etc).
+                let current_project_folder = self.widgets.project_file_chooser.get_current_folder();
+
                 let preference_response = self.widgets.preferences_dialog.run();
                 if preference_response == ResponseType::Ok {
                     let sample_rate_choice = self
@@ -593,11 +567,7 @@ impl Update for Win {
                         .get_active_text()
                         .unwrap()
                         .to_string();
-                    let sample_rate = if sample_rate_choice == "default" {
-                        0
-                    } else {
-                        sample_rate_choice.parse::<u32>().unwrap()
-                    };
+                    let sample_rate = sample_rate_choice.parse::<u32>().unwrap();
 
                     let channel_choice = self
                         .widgets
@@ -605,13 +575,9 @@ impl Update for Win {
                         .get_active_text()
                         .unwrap()
                         .to_string();
-                    let num_channels = if channel_choice == "default" {
-                        0
-                    } else {
-                        channel_choice.parse::<u16>().unwrap()
-                    };
+                    let num_channels = channel_choice.parse::<u16>().unwrap();
 
-                    let input_info = InputDeviceInfo {
+                    let input_info = InputDeviceSelection {
                         name: self
                             .widgets
                             .input_device_cbox
@@ -656,6 +622,15 @@ impl Update for Win {
                         .go_to(self.model.chunk_number as usize)
                         .unwrap();
                     reset_progress_bar_info(file_status, &mut self.model, &self.widgets);
+                } else {
+                    // Reset all fields back to original positions
+                    self.widgets.input_device_cbox.set_active(current_input_device_pos);
+                    self.widgets.input_channels_cbox.set_active(current_input_channels_pos);
+                    self.widgets.input_sample_rate_cbox.set_active(current_input_sample_rate_pos);
+
+                    self.widgets.output_device_cbox.set_active(current_output_device_pos);
+
+                    self.widgets.project_file_chooser.set_filename(current_project_folder.unwrap());
                 }
                 self.widgets.preferences_dialog.hide();
             }
@@ -896,12 +871,6 @@ impl Widget for Win {
             preferences_menu_item,
             connect_activate(_),
             Msg::OpenPreferences
-        );
-        connect!(
-            relm,
-            input_device_cbox,
-            connect_changed(_),
-            Msg::ChangeInputDevicePreference
         );
         connect!(relm, about_menu_item, connect_activate(_), Msg::About);
         connect!(quit_menu_item, connect_activate(_), relm, Msg::Quit);

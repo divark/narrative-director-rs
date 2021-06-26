@@ -1,5 +1,5 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{default_host, Device, SampleFormat, SampleRate, Stream, SupportedStreamConfig};
+use cpal::{default_host, Device, SampleFormat, SampleRate, Stream, SupportedStreamConfig, ChannelCount};
 use hound::{WavSpec, WavWriter};
 use std::fs::File;
 use std::io::BufWriter;
@@ -44,28 +44,12 @@ fn device_config_from_sample_and_channels(
     sample_rate: u32,
     num_channels: u16,
 ) -> SupportedStreamConfig {
-    if sample_rate == 0 && num_channels == 0 {
-        return device.default_input_config().unwrap();
-    }
-
-    let chosen_sample_rate = if sample_rate > 0 {
-        sample_rate
-    } else {
-        device.default_input_config().unwrap().sample_rate().0
-    };
-
-    let chosen_num_channels = if num_channels > 0 {
-        num_channels
-    } else {
-        device.default_input_config().unwrap().channels()
-    };
-
     device
         .supported_input_configs()
         .unwrap()
-        .find(|config| config.channels() == chosen_num_channels)
+        .find(|config| config.channels() == num_channels)
         .expect("Could not find a device config with given sample rate and channels.")
-        .with_sample_rate(SampleRate(chosen_sample_rate))
+        .with_sample_rate(SampleRate(sample_rate))
 }
 
 pub struct CpalAudioRecorder {
@@ -144,17 +128,63 @@ impl CpalAudioRecorder {
         self.io_stream = None;
     }
 
+    pub fn get_input_device(&self) -> &Device {
+        &self.input_device
+    }
+
     pub fn get_input_devices(&self) -> Vec<Device> {
         let host = default_host();
 
         host.input_devices().unwrap().collect()
     }
 
+    pub fn get_channels_for_device(&self, input_device: &Device) -> Vec<ChannelCount> {
+        let mut found_channels: Vec<ChannelCount> = Vec::new();
+
+        // 1: Get supported configurations
+        let supported_configs = input_device.supported_input_configs().unwrap();
+
+        // 2: Filter by channel count
+        supported_configs.for_each(|config| {
+           found_channels.push(config.channels());
+        });
+
+        found_channels.sort_unstable();
+        found_channels.dedup();
+
+        found_channels
+    }
+
+    pub fn get_sample_rates_for_device(&self, input_device: &Device) -> Vec<u32> {
+        let mut found_sample_rates: Vec<u32> = Vec::new();
+
+        // 1: Get supported configurations
+        let supported_configs = input_device.supported_input_configs().unwrap();
+
+        // 2: Calculate sample rates using the min and max as reference.
+        const SUPPORTED_SAMPLE_RATES: [u32; 6] = [16000, 32000, 44100, 48000, 88200, 96000];
+
+        supported_configs.for_each(|config| {
+            for sample_rate in SUPPORTED_SAMPLE_RATES {
+                if sample_rate >= config.min_sample_rate().0
+                    && sample_rate <= config.max_sample_rate().0
+                {
+                    found_sample_rates.push(sample_rate);
+                }
+            }
+        });
+
+        found_sample_rates.sort_unstable();
+        found_sample_rates.dedup();
+
+        found_sample_rates
+    }
+
     pub fn set_input_device(
         &mut self,
         new_input_device: Device,
         sample_rate: u32,
-        num_channels: u16,
+        num_channels: ChannelCount,
     ) {
         self.config =
             device_config_from_sample_and_channels(&new_input_device, sample_rate, num_channels);
@@ -212,5 +242,47 @@ mod tests {
 
         assert!(fs::metadata(file_to_record.clone()).unwrap().is_file());
         assert_ne!(first_created_time, modified_time);
+    }
+
+    #[test]
+    fn has_atleast_one_input() {
+        let recorder = CpalAudioRecorder::new();
+
+        let input_devices = recorder.get_input_devices();
+        assert!(input_devices.len() > 0);
+    }
+
+    #[test]
+    fn some_input_has_channels() {
+        let recorder = CpalAudioRecorder::new();
+
+        let input_devices = recorder.get_input_devices();
+        let first_input_device = input_devices.get(0);
+        assert!(first_input_device.is_some());
+
+        let first_input_device = first_input_device.unwrap();
+        let input_channels = recorder.get_channels_for_device(first_input_device);
+        assert!(input_channels.len() > 0);
+    }
+
+    #[test]
+    fn has_valid_sample_rates() {
+        let recorder = CpalAudioRecorder::new();
+
+        let input_devices = recorder.get_input_devices();
+        let first_input_device = input_devices.get(0);
+        assert!(first_input_device.is_some());
+
+        let first_input_device = first_input_device.unwrap();
+        let input_sample_rates = recorder.get_sample_rates_for_device(first_input_device);
+
+        assert!(!input_sample_rates.is_empty());
+
+        const SAMPLE_RATES: [u32; 6] = [16000, 32000, 44100, 48000, 88200, 96000];
+        let has_valid_sample_rate = input_sample_rates.iter().any(|sample_rate| {
+            SAMPLE_RATES.contains(sample_rate)
+        });
+
+        assert!(has_valid_sample_rate);
     }
 }
