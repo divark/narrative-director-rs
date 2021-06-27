@@ -10,7 +10,10 @@ edition = "2018"
 gtk = "^0.9.0"
 relm = "^0.21.0"
 relm-derive = "^0.21.0"
-cpal = "^0.13.3"
+# Workaround for getting Windows builds to work as well in the meantime.
+# If merged from this thread, go back to using normal cpal:
+# https://github.com/RustAudio/cpal/pull/504
+cpal = { git="https://github.com/JoshuaBatty/cpal", branch="windows_com" }
 hound = "^3.4.0"
 dirs = "^3.0.2"
 
