@@ -141,6 +141,10 @@ impl CpalAudioPlayer {
         host.output_devices().unwrap().collect()
     }
 
+    pub fn get_output_device(&self) -> &Device {
+        &self.output_device
+    }
+
     pub fn set_output_device(&mut self, new_output_device: Device) {
         self.output_device = new_output_device;
     }

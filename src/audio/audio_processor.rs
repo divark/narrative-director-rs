@@ -79,6 +79,10 @@ impl AudioIO {
     pub fn get_output_devices(&self) -> Vec<Device> {
         self.player.get_output_devices()
     }
+
+    pub fn get_output_device(&self) -> &Device {
+        self.player.get_output_device()
+    }
 }
 
 impl MediaProcessor for AudioIO {

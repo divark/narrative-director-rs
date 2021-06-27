@@ -193,7 +193,13 @@ fn populate_input_options(input_options: &mut ComboBoxText, audio_io: &AudioIO) 
 
         input_options.append_text(&input_device_name);
     }
-    input_options.set_active(Some(0));
+
+    let default_input_pos = input_devices
+        .iter()
+        .position(|input_device| audio_io.get_input_device().name().unwrap() == *input_device.name().unwrap())
+        .unwrap() as u32;
+
+    input_options.set_active(Some(default_input_pos));
 }
 
 /// Populates the choices available for output devices
@@ -205,7 +211,13 @@ fn populate_output_options(output_options: &mut ComboBoxText, audio_io: &AudioIO
 
         output_options.append_text(&output_device_name);
     }
-    output_options.set_active(Some(0));
+
+    let default_output_pos = output_devices
+        .iter()
+        .position(|output_device| audio_io.get_output_device().name().unwrap() == *output_device.name().unwrap())
+        .unwrap() as u32;
+
+    output_options.set_active(Some(default_output_pos));
 }
 
 /// Populates fields for given Input Device
