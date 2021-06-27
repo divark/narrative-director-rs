@@ -1,5 +1,7 @@
 # Narrative Director (Rust Edition)
 
+![Application Icon](resources/images/icon.png)
+
 ## Summary
 Narrative Director is an Audio/Video Recording Pacer application, with a focus on error-free readings.
 This tool aspires to keep editing to a minimum, keeping only recordings that are deemed satisfactory by the reader.
@@ -15,9 +17,11 @@ addition to having an excuse to learn about [Rust](https://www.rust-lang.org/) a
 ### Planned
 - Play, Stop, and Record Video for each paragraph entry.
 
-## Mock-ups
-##### User Interface Mappings
-![Interface Mappings](resources/images/Mappings.png)
+## User Interface Preview
+##### Main Application
+![Main Window](resources/images/MainApp.png)
+##### Settings
+![Interface Mappings](resources/images/Settings.png)
 
 ## Known Working Environments
 - M1 Mac Mini
