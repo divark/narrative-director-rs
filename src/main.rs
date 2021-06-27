@@ -196,7 +196,9 @@ fn populate_input_options(input_options: &mut ComboBoxText, audio_io: &AudioIO) 
 
     let default_input_pos = input_devices
         .iter()
-        .position(|input_device| audio_io.get_input_device().name().unwrap() == *input_device.name().unwrap())
+        .position(|input_device| {
+            audio_io.get_input_device().name().unwrap() == *input_device.name().unwrap()
+        })
         .unwrap() as u32;
 
     input_options.set_active(Some(default_input_pos));
@@ -214,7 +216,9 @@ fn populate_output_options(output_options: &mut ComboBoxText, audio_io: &AudioIO
 
     let default_output_pos = output_devices
         .iter()
-        .position(|output_device| audio_io.get_output_device().name().unwrap() == *output_device.name().unwrap())
+        .position(|output_device| {
+            audio_io.get_output_device().name().unwrap() == *output_device.name().unwrap()
+        })
         .unwrap() as u32;
 
     output_options.set_active(Some(default_output_pos));
