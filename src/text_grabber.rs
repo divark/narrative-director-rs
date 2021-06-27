@@ -55,7 +55,7 @@ impl TextGrabber for EnglishParagraphRetriever {
         // kind. For example, it may be the case that some text file ends with
         // two, or even three sentences. Thus, this should be captured for
         // completeness.
-        if current_paragraph.len() > 0 {
+        if !current_paragraph.is_empty() {
             self.paragraphs
                 .push(String::from_utf8(current_paragraph).expect("Invalid UTF-8 given."));
         }
@@ -77,13 +77,13 @@ impl TextGrabber for EnglishParagraphRetriever {
 }
 
 impl EnglishParagraphRetriever {
-    pub fn new() -> EnglishParagraphRetriever {
+    pub fn new() -> Self {
         let mut end_of_sentence_symbols = HashSet::new();
         end_of_sentence_symbols.insert(String::from("."));
         end_of_sentence_symbols.insert(String::from("?"));
         end_of_sentence_symbols.insert(String::from("!"));
 
-        EnglishParagraphRetriever {
+        Self {
             delimiters: end_of_sentence_symbols,
             paragraphs: Vec::new(),
         }
