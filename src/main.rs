@@ -583,6 +583,22 @@ impl Update for Win {
 
                 let preference_response = self.widgets.preferences_dialog.run();
                 if preference_response == ResponseType::Ok {
+                    let project_path = self.widgets.project_file_chooser.get_filename().unwrap();
+
+                    let new_directory = project_path.join(&self.model.current_filename);
+                    if !new_directory.is_dir() {
+                        let mut dir_builder = DirBuilder::new();
+                        dir_builder.recursive(true);
+
+                        dir_builder.create(new_directory.clone()).unwrap();
+                    }
+
+                    self.model.project_directory = project_path.to_str().unwrap().to_string();
+                    self.model.audio_processor = AudioIO::new(
+                        self.model.chunk_total as usize,
+                        new_directory.to_str().unwrap().to_string(),
+                    );
+
                     let sample_rate_choice = self
                         .widgets
                         .input_sample_rate_cbox
@@ -621,22 +637,6 @@ impl Update for Win {
 
                     self.model.audio_processor.set_input_device(input_info);
                     self.model.audio_processor.set_output_device(output_info);
-
-                    let project_path = self.widgets.project_file_chooser.get_filename().unwrap();
-
-                    let new_directory = project_path.join(&self.model.current_filename);
-                    if !new_directory.is_dir() {
-                        let mut dir_builder = DirBuilder::new();
-                        dir_builder.recursive(true);
-
-                        dir_builder.create(new_directory.clone()).unwrap();
-                    }
-
-                    self.model.project_directory = project_path.to_str().unwrap().to_string();
-                    self.model.audio_processor = AudioIO::new(
-                        self.model.chunk_total as usize,
-                        new_directory.to_str().unwrap().to_string(),
-                    );
 
                     let file_status = self
                         .model
@@ -686,6 +686,7 @@ impl Update for Win {
 
                 let file_chooser_response = file_chooser.run();
                 if file_chooser_response == ResponseType::Ok {
+                    // Start by making a new paragraph parser with the given file.
                     let filename = file_chooser.get_filename().expect("Couldn't get filename");
                     let file = File::open(&filename).expect("Couldn't open file");
 
@@ -699,6 +700,8 @@ impl Update for Win {
                     self.model.chunk_number = 0;
                     self.model.chunk_total = num_paragraphs;
 
+                    // Then redirect where the audio files will be read/written to the
+                    // current project directory.
                     let project_path = Path::new(&self.model.project_directory)
                         .join(filename.file_stem().unwrap());
                     if !project_path.is_dir() {
@@ -711,10 +714,57 @@ impl Update for Win {
                     self.model.current_filename =
                         filename.file_stem().unwrap().to_str().unwrap().to_string();
 
+                    // Also, reload the audio processor to utilize the new
+                    // project path.
                     self.model.audio_processor = AudioIO::new(
                         self.model.chunk_total as usize,
                         project_path.to_str().unwrap().to_string(),
                     );
+
+                    // Keep the input and output selections in preferences if the user has
+                    // already specified their devices.
+                    if self.model.preferences_has_been_shown_once {
+                        let sample_rate_choice = self
+                            .widgets
+                            .input_sample_rate_cbox
+                            .get_active_text()
+                            .unwrap()
+                            .to_string();
+                        let sample_rate = sample_rate_choice.parse::<u32>().unwrap();
+
+                        let channel_choice = self
+                            .widgets
+                            .input_channels_cbox
+                            .get_active_text()
+                            .unwrap()
+                            .to_string();
+                        let num_channels = channel_choice.parse::<u16>().unwrap();
+
+                        let input_info = InputDeviceSelection {
+                            name: self
+                                .widgets
+                                .input_device_cbox
+                                .get_active_text()
+                                .unwrap()
+                                .to_string(),
+                            sample_rate,
+                            num_channels,
+                        };
+
+                        let output_info = OutputDeviceInfo {
+                            name: self
+                                .widgets
+                                .output_device_cbox
+                                .get_active_text()
+                                .unwrap()
+                                .to_string(),
+                        };
+
+                        self.model.audio_processor.set_input_device(input_info);
+                        self.model.audio_processor.set_output_device(output_info);
+                    }
+
+                    // Finally, make the right buttons active depending on what chunks are available.
                     show_chunk(0, &self.model.chunk_retriever, paragraph_ui).unwrap();
 
                     change_next_button_sensitivity(
