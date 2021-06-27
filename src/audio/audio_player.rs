@@ -143,6 +143,11 @@ impl CpalAudioPlayer {
     }
 }
 
+// This test suite is ignored, as the Continuous Integration setup
+// does not include any form of audio devices.
+//
+// This should still be tested locally with
+// cargo test -- --ignored
 #[cfg(test)]
 mod tests {
     use crate::audio::audio_player::CpalAudioPlayer;
@@ -152,6 +157,7 @@ mod tests {
     const AUDIO_FILE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/test.wav");
 
     #[test]
+    #[ignore]
     fn plays_wav_file() {
         let mut audio_player = CpalAudioPlayer::new();
         let expected_duration_secs = 3;
@@ -166,6 +172,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn pauses_playing_wav_file() {
         let mut audio_player = CpalAudioPlayer::new();
         let expected_duration_secs = 3;
@@ -188,6 +195,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn stops_playing_audio() {
         let mut audio_player = CpalAudioPlayer::new();
 
@@ -201,6 +209,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn can_play_again_after_stopped() {
         let mut audio_player = CpalAudioPlayer::new();
 
@@ -221,6 +230,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn skips_to_2s_in() {
         let mut audio_player = CpalAudioPlayer::new();
         let expected_duration_to_wait = 1;

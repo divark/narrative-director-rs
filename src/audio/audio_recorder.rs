@@ -194,6 +194,11 @@ impl CpalAudioRecorder {
     }
 }
 
+// This test suite is ignored, as the Continuous Integration setup
+// does not include any form of audio devices.
+//
+// This should still be tested locally with
+// cargo test -- --ignored
 #[cfg(test)]
 mod tests {
     use crate::audio::audio_recorder::CpalAudioRecorder;
@@ -202,6 +207,7 @@ mod tests {
     use std::time::Duration;
 
     #[test]
+    #[ignore]
     fn can_record_once() {
         let mut recorder = CpalAudioRecorder::new();
 
@@ -216,6 +222,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn can_record_twice() {
         let mut recorder = CpalAudioRecorder::new();
 
@@ -247,6 +254,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn has_atleast_one_input() {
         let recorder = CpalAudioRecorder::new();
 
@@ -255,6 +263,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn some_input_has_channels() {
         let recorder = CpalAudioRecorder::new();
 
@@ -268,6 +277,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn has_valid_sample_rates() {
         let recorder = CpalAudioRecorder::new();
 
