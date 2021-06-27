@@ -1,5 +1,5 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{default_host, Device, PauseStreamError, PlayStreamError, Stream, StreamConfig};
+use cpal::{default_host, Device, PauseStreamError, PlayStreamError, Stream, StreamConfig, SampleRate};
 use hound::WavReader;
 use std::path::Path;
 
@@ -32,7 +32,8 @@ fn output_stream_from(
 
     file_decoder.seek(samples_to_skip).unwrap();
 
-    let output_config: StreamConfig = output_device.default_output_config().unwrap().into();
+    let mut output_config: StreamConfig = output_device.default_output_config().unwrap().into();
+    output_config.sample_rate = SampleRate(sample_rate);
     let output_data_fn = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
         for (dst, src) in data.iter_mut().zip(file_decoder.samples::<f32>()) {
             *dst = src.unwrap_or(0.0);
