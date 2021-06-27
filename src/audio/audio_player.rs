@@ -1,5 +1,7 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{default_host, Device, PauseStreamError, PlayStreamError, Stream, StreamConfig, SampleRate};
+use cpal::{
+    default_host, Device, PauseStreamError, PlayStreamError, SampleRate, Stream, StreamConfig,
+};
 use hound::WavReader;
 use std::path::Path;
 
