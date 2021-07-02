@@ -125,8 +125,8 @@ fn show_chunk(
             .set_text(format!("{}/{}", chunk_num + 1, chunk_getter.len()).as_str());
 
         ui.chunk_viewer
-            .get_buffer()
-            .expect("Couldn't get text viewer")
+            .buffer()
+            .expect("Could not load TextView from Chunk Viewer")
             .set_text(paragraph.as_str());
 
         return Ok(());
@@ -480,7 +480,7 @@ impl Update for Win {
                 );
                 goto_dialog.set_default_response(ResponseType::Ok);
 
-                let content_area = goto_dialog.get_content_area();
+                let content_area = goto_dialog.content_area();
 
                 let goto_spin_button =
                     SpinButton::with_range(1.0, self.model.chunk_total as f64, 1.0);
@@ -490,7 +490,7 @@ impl Update for Win {
 
                 let goto_dialog_response = goto_dialog.run();
                 if goto_dialog_response == ResponseType::Ok {
-                    let goto_paragraph_num = (goto_spin_button.get_value_as_int() - 1) as u32;
+                    let goto_paragraph_num = (goto_spin_button.value_as_int() - 1) as u32;
                     if show_chunk(
                         goto_paragraph_num,
                         &self.model.chunk_retriever,
@@ -586,20 +586,19 @@ impl Update for Win {
                 // Determine if a new Output or Input Device must be created.
 
                 // Capture current positions of input fields if cancelled
-                let current_input_device_pos = self.widgets.input_device_cbox.get_active();
-                let current_input_channels_pos = self.widgets.input_channels_cbox.get_active();
-                let current_input_sample_rate_pos =
-                    self.widgets.input_sample_rate_cbox.get_active();
+                let current_input_device_pos = self.widgets.input_device_cbox.active();
+                let current_input_channels_pos = self.widgets.input_channels_cbox.active();
+                let current_input_sample_rate_pos = self.widgets.input_sample_rate_cbox.active();
 
                 // Now the output fields
-                let current_output_device_pos = self.widgets.output_device_cbox.get_active();
+                let current_output_device_pos = self.widgets.output_device_cbox.active();
 
                 // Finally, the general fields (Project folder location, etc).
-                let current_project_folder = self.widgets.project_file_chooser.get_current_folder();
+                let current_project_folder = self.widgets.project_file_chooser.current_folder();
 
                 let preference_response = self.widgets.preferences_dialog.run();
                 if preference_response == ResponseType::Ok {
-                    let project_path = self.widgets.project_file_chooser.get_filename().unwrap();
+                    let project_path = self.widgets.project_file_chooser.filename().unwrap();
 
                     let new_directory = project_path.join(&self.model.current_filename);
                     if !new_directory.is_dir() {
@@ -618,7 +617,7 @@ impl Update for Win {
                     let sample_rate_choice = self
                         .widgets
                         .input_sample_rate_cbox
-                        .get_active_text()
+                        .active_text()
                         .unwrap()
                         .to_string();
                     let sample_rate = sample_rate_choice.parse::<u32>().unwrap();
@@ -626,7 +625,7 @@ impl Update for Win {
                     let channel_choice = self
                         .widgets
                         .input_channels_cbox
-                        .get_active_text()
+                        .active_text()
                         .unwrap()
                         .to_string();
                     let num_channels = channel_choice.parse::<u16>().unwrap();
@@ -635,7 +634,7 @@ impl Update for Win {
                         name: self
                             .widgets
                             .input_device_cbox
-                            .get_active_text()
+                            .active_text()
                             .unwrap()
                             .to_string(),
                         sample_rate,
@@ -646,7 +645,7 @@ impl Update for Win {
                         name: self
                             .widgets
                             .output_device_cbox
-                            .get_active_text()
+                            .active_text()
                             .unwrap()
                             .to_string(),
                     };
@@ -703,7 +702,7 @@ impl Update for Win {
                 let file_chooser_response = file_chooser.run();
                 if file_chooser_response == ResponseType::Ok {
                     // Start by making a new paragraph parser with the given file.
-                    let filename = file_chooser.get_filename().expect("Couldn't get filename");
+                    let filename = file_chooser.filename().expect("Couldn't get filename");
                     let file = File::open(&filename).expect("Couldn't open file");
 
                     self.model.chunk_retriever = EnglishParagraphRetriever::new();
@@ -743,7 +742,7 @@ impl Update for Win {
                         let sample_rate_choice = self
                             .widgets
                             .input_sample_rate_cbox
-                            .get_active_text()
+                            .active_text()
                             .unwrap()
                             .to_string();
                         let sample_rate = sample_rate_choice.parse::<u32>().unwrap();
@@ -751,7 +750,7 @@ impl Update for Win {
                         let channel_choice = self
                             .widgets
                             .input_channels_cbox
-                            .get_active_text()
+                            .active_text()
                             .unwrap()
                             .to_string();
                         let num_channels = channel_choice.parse::<u16>().unwrap();
@@ -760,7 +759,7 @@ impl Update for Win {
                             name: self
                                 .widgets
                                 .input_device_cbox
-                                .get_active_text()
+                                .active_text()
                                 .unwrap()
                                 .to_string(),
                             sample_rate,
@@ -771,7 +770,7 @@ impl Update for Win {
                             name: self
                                 .widgets
                                 .output_device_cbox
-                                .get_active_text()
+                                .active_text()
                                 .unwrap()
                                 .to_string(),
                         };
@@ -808,7 +807,7 @@ impl Update for Win {
                         .unwrap();
                     self.widgets.play_button.set_label("Play");
                 } else {
-                    self.model.audio_status = match self.widgets.progress_bar.get_value() {
+                    self.model.audio_status = match self.widgets.progress_bar.value() {
                         x if x >= 1.0 => {
                             self.model.audio_processor.skip_to(x as u32 * 1000).unwrap()
                         }
@@ -834,7 +833,7 @@ impl Update for Win {
                     return;
                 }
 
-                self.model.ms_passed = self.widgets.progress_bar.get_value() as u32 * 1000;
+                self.model.ms_passed = self.widgets.progress_bar.value() as u32 * 1000;
                 let progress_text = format!(
                     "{}/{}",
                     to_hh_mm_ss_str(self.model.ms_passed),
@@ -901,36 +900,36 @@ impl Widget for Win {
         let glade_src = include_str!("ui/main-window.glade");
         let builder = Builder::from_string(glade_src);
 
-        let window: Window = builder.get_object("window").unwrap();
+        let window: Window = builder.object("window").unwrap();
         window.show_all();
 
         // Main Window Widgets
-        let chunk_progress_label: Label = builder.get_object("chunk_position_lbl").unwrap();
-        let text_viewer: TextView = builder.get_object("chunk_view_txtviewer").unwrap();
+        let chunk_progress_label: Label = builder.object("chunk_position_lbl").unwrap();
+        let text_viewer: TextView = builder.object("chunk_view_txtviewer").unwrap();
 
         // Media IO Items
-        let prev_button: Button = builder.get_object("prev_chunk_btn").unwrap();
-        let next_button: Button = builder.get_object("next_chunk_btn").unwrap();
-        let stop_button: Button = builder.get_object("stop_btn").unwrap();
-        let record_button: Button = builder.get_object("record_btn").unwrap();
-        let play_button: Button = builder.get_object("play/pause_btn").unwrap();
-        let audio_progress_label: Label = builder.get_object("audio_progress_lbl").unwrap();
-        let progress_bar: Scrollbar = builder.get_object("progress_bar").unwrap();
+        let prev_button: Button = builder.object("prev_chunk_btn").unwrap();
+        let next_button: Button = builder.object("next_chunk_btn").unwrap();
+        let stop_button: Button = builder.object("stop_btn").unwrap();
+        let record_button: Button = builder.object("record_btn").unwrap();
+        let play_button: Button = builder.object("play/pause_btn").unwrap();
+        let audio_progress_label: Label = builder.object("audio_progress_lbl").unwrap();
+        let progress_bar: Scrollbar = builder.object("progress_bar").unwrap();
 
         // Main Menu Items
-        let open_menu_item: MenuItem = builder.get_object("open_menu").unwrap();
-        let goto_menu_item: MenuItem = builder.get_object("goto_menu").unwrap();
-        let preferences_menu_item: MenuItem = builder.get_object("preferences_menu").unwrap();
-        let about_menu_item: MenuItem = builder.get_object("about_menu").unwrap();
-        let quit_menu_item: MenuItem = builder.get_object("close_menu").unwrap();
+        let open_menu_item: MenuItem = builder.object("open_menu").unwrap();
+        let goto_menu_item: MenuItem = builder.object("goto_menu").unwrap();
+        let preferences_menu_item: MenuItem = builder.object("preferences_menu").unwrap();
+        let about_menu_item: MenuItem = builder.object("about_menu").unwrap();
+        let quit_menu_item: MenuItem = builder.object("close_menu").unwrap();
 
         // Dialogs
-        let about_dialog: AboutDialog = builder.get_object("about_dialog").unwrap();
+        let about_dialog: AboutDialog = builder.object("about_dialog").unwrap();
 
         // Preferences
-        let preferences_dialog: Dialog = builder.get_object("preferences_dialog").unwrap();
+        let preferences_dialog: Dialog = builder.object("preferences_dialog").unwrap();
         // General - Preferences
-        let project_file_chooser: FileChooser = builder.get_object("project_file_chooser").unwrap();
+        let project_file_chooser: FileChooser = builder.object("project_file_chooser").unwrap();
         let home_directory = dirs::home_dir().unwrap().join("ND_Projects");
         let project_path = Path::new(home_directory.as_path());
         if !project_path.is_dir() {
@@ -938,15 +937,14 @@ impl Widget for Win {
         }
         project_file_chooser.set_current_folder(project_path);
         // Audio - Preferences
-        let mut input_device_cbox: ComboBoxText = builder.get_object("input_device_cbox").unwrap();
+        let mut input_device_cbox: ComboBoxText = builder.object("input_device_cbox").unwrap();
         populate_input_options(&mut input_device_cbox, &model.audio_processor);
 
         let input_sample_rate_cbox: ComboBoxText =
-            builder.get_object("input_sample_rate_cbox").unwrap();
-        let input_channels_cbox: ComboBoxText = builder.get_object("input_channels_cbox").unwrap();
+            builder.object("input_sample_rate_cbox").unwrap();
+        let input_channels_cbox: ComboBoxText = builder.object("input_channels_cbox").unwrap();
 
-        let mut output_device_cbox: ComboBoxText =
-            builder.get_object("output_device_cbox").unwrap();
+        let mut output_device_cbox: ComboBoxText = builder.object("output_device_cbox").unwrap();
         populate_output_options(&mut output_device_cbox, &model.audio_processor);
 
         connect!(relm, prev_button, connect_clicked(_), Msg::Previous);
