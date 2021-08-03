@@ -14,11 +14,18 @@ use audio::prelude::*;
 use audio::ProcessingStatus;
 use cpal::traits::DeviceTrait;
 use cpal::{ChannelCount, Device};
-use std::collections::HashMap;
 use std::fs;
 use std::fs::{DirBuilder, File};
 use std::path::Path;
+use std::{collections::HashMap, io::Read};
 use text_grabber::{EnglishParagraphRetriever, TextGrabber};
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Debug)]
+struct ChunksSessionInfo {
+    current_paragraph_num: u32,
+}
 
 struct InputDevicesInfo {
     channels: HashMap<String, Vec<ChannelCount>>,
@@ -712,18 +719,36 @@ impl Update for Win {
                         return;
                     }
 
-                    self.model.chunk_number = 0;
                     self.model.chunk_total = num_paragraphs;
 
                     // Then redirect where the audio files will be read/written to the
                     // current project directory.
                     let project_path = Path::new(&self.model.project_directory)
                         .join(filename.file_stem().unwrap());
-                    if !project_path.is_dir() {
+
+                    // Load the user's last position, since the project path existing must
+                    // mean that a session file was made.
+                    if project_path.is_dir() {
+                        let session_file_path = Path::new(&project_path).join(".session.json");
+                        assert!(session_file_path.is_file());
+
+                        let mut session_file =
+                            File::open(session_file_path).expect("Could not load session file.");
+                        let mut file_contents = String::new();
+                        session_file
+                            .read_to_string(&mut file_contents)
+                            .expect("Unable to read contents from session file.");
+
+                        let session_info: ChunksSessionInfo = serde_json::from_str(&file_contents)
+                            .expect("Unable to parse JSON from session file.");
+
+                        self.model.chunk_number = session_info.current_paragraph_num;
+                    } else {
                         let mut dir_builder = DirBuilder::new();
                         dir_builder.recursive(true);
 
                         dir_builder.create(project_path.clone()).unwrap();
+                        self.model.chunk_number = 0;
                     }
 
                     self.model.current_filename =
@@ -780,7 +805,17 @@ impl Update for Win {
                     }
 
                     // Finally, make the right buttons active depending on what chunks are available.
-                    show_chunk(0, &self.model.chunk_retriever, paragraph_ui).unwrap();
+                    show_chunk(
+                        self.model.chunk_number,
+                        &self.model.chunk_retriever,
+                        paragraph_ui,
+                    )
+                    .unwrap();
+
+                    change_prev_button_sensitivity(
+                        self.model.chunk_number,
+                        &self.widgets.previous_chunk_button,
+                    );
 
                     change_next_button_sensitivity(
                         self.model.chunk_number,
@@ -791,13 +826,35 @@ impl Update for Win {
                     self.widgets.goto_menu_item.set_sensitive(true);
                     self.widgets.record_button.set_sensitive(true);
 
-                    let file_status = self.model.audio_processor.go_to(0).unwrap();
+                    let file_status = self
+                        .model
+                        .audio_processor
+                        .go_to(self.model.chunk_number as usize)
+                        .unwrap();
                     reset_progress_bar_info(file_status, &mut self.model, &self.widgets);
                 }
 
                 file_chooser.close();
             }
-            Msg::Quit => gtk::main_quit(),
+            Msg::Quit => {
+                if !self.model.current_filename.is_empty() {
+                    let filepath =
+                        Path::new(&self.model.project_directory).join(&self.model.current_filename);
+                    assert!(filepath.is_dir());
+
+                    let session_info: ChunksSessionInfo = ChunksSessionInfo {
+                        current_paragraph_num: self.model.chunk_number,
+                    };
+
+                    fs::write(
+                        filepath.join(".session.json"),
+                        serde_json::to_string(&session_info).unwrap(),
+                    )
+                    .expect("Could not write to session file.");
+                }
+
+                gtk::main_quit();
+            }
             Msg::Play => {
                 if self.model.audio_status == ProcessingStatus::Playing {
                     self.model.audio_status = self

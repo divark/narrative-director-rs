@@ -26,6 +26,7 @@ fn output_stream_from(
     let mut file_decoder = WavReader::open(input_file_name).unwrap();
     let num_samples = file_decoder.duration();
     let sample_rate = file_decoder.spec().sample_rate;
+    let channels = file_decoder.spec().channels;
     let samples_to_skip = (starting_pos_ms / 1000) * sample_rate;
 
     if samples_to_skip > num_samples {
@@ -36,9 +37,10 @@ fn output_stream_from(
 
     let mut output_config: StreamConfig = output_device.default_output_config().unwrap().into();
     output_config.sample_rate = SampleRate(sample_rate);
+    output_config.channels = channels;
     let output_data_fn = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
         for (dst, src) in data.iter_mut().zip(file_decoder.samples::<f32>()) {
-            *dst = src.unwrap_or(0.0);
+            *dst = src.unwrap();
         }
     };
 

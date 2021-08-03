@@ -249,7 +249,7 @@ mod tests {
             .modified()
             .unwrap();
 
-        assert!(fs::metadata(file_to_record.clone()).unwrap().is_file());
+        assert!(fs::metadata(file_to_record).unwrap().is_file());
         assert_ne!(first_created_time, modified_time);
     }
 
@@ -259,7 +259,7 @@ mod tests {
         let recorder = CpalAudioRecorder::new();
 
         let input_devices = recorder.get_input_devices();
-        assert!(input_devices.len() > 0);
+        assert!(!input_devices.is_empty());
     }
 
     #[test]
@@ -273,7 +273,7 @@ mod tests {
 
         let first_input_device = first_input_device.unwrap();
         let input_channels = recorder.get_channels_for_device(first_input_device);
-        assert!(input_channels.len() > 0);
+        assert!(!input_channels.is_empty());
     }
 
     #[test]
