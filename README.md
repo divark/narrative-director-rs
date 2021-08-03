@@ -2,6 +2,8 @@
 
 ![Application Icon](resources/images/icon.png)
 
+Credit goes to [ColorfulSkyWisps](https://linktr.ee/ColorfulSkyWisps) for the creation of this logo. All rights reserved.
+
 ## Summary
 Narrative Director is an Audio/Video Recording Pacer application, with a focus on error-free readings.
 This tool aspires to keep editing to a minimum, keeping only recordings that are deemed satisfactory by the reader.
@@ -35,4 +37,6 @@ addition to having an excuse to learn about [Rust](https://www.rust-lang.org/) a
 6. Run `cargo run` to see the current state of the application.
 
 ## License
-Narrative Director is distributed under the GPLv3 License, which can be viewed [here.](COPYING)
+Narrative Director's code is distributed under the GPLv3 License, which can be viewed [here.](COPYING)
+
+The icon is made by [ColorfulSkyWisps](https://linktr.ee/ColorfulSkyWisps), all rights reserved.
