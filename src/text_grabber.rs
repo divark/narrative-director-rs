@@ -63,8 +63,7 @@ impl ParagraphRetriever {
     /// Returns a ParagraphRetriever with the following defaults:
     /// - language is set to English,
     /// - A paragraph consists of four sentences.
-    pub fn new() -> Self
-    {
+    pub fn new() -> Self {
         Self {
             language: LangDelimiters::English,
             num_sentences: 4,
