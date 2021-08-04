@@ -18,7 +18,7 @@ use std::fs;
 use std::fs::{DirBuilder, File};
 use std::path::Path;
 use std::{collections::HashMap, io::Read};
-use text_grabber::{EnglishParagraphRetriever, TextGrabber};
+use text_grabber::{ParagraphRetriever, TextGrabber};
 
 use serde::{Deserialize, Serialize};
 
@@ -39,7 +39,7 @@ struct InputDevicesInfo {
 /// this model influences the logical flow of the
 /// application, depending on its current state.
 struct Model {
-    chunk_retriever: EnglishParagraphRetriever,
+    chunk_retriever: ParagraphRetriever,
     chunk_number: u32,
     chunk_total: u32,
 
@@ -124,7 +124,7 @@ struct ChunkViewingUi<'a> {
 /// Populates the UI with the specified chunk.
 fn show_chunk(
     chunk_num: u32,
-    chunk_getter: &EnglishParagraphRetriever,
+    chunk_getter: &ParagraphRetriever,
     ui: ChunkViewingUi,
 ) -> Result<(), ()> {
     if let Some(paragraph) = chunk_getter.get_chunk(chunk_num as usize) {
@@ -306,7 +306,7 @@ impl Update for Win {
     type Msg = Msg;
 
     fn model(_: &Relm<Self>, _: ()) -> Model {
-        let chunk_retriever = EnglishParagraphRetriever::new();
+        let chunk_retriever = ParagraphRetriever::new();
         let project_directory = dirs::home_dir()
             .unwrap()
             .join("ND_Projects")
@@ -712,7 +712,7 @@ impl Update for Win {
                     let filename = file_chooser.filename().expect("Couldn't get filename");
                     let file = File::open(&filename).expect("Couldn't open file");
 
-                    self.model.chunk_retriever = EnglishParagraphRetriever::new();
+                    self.model.chunk_retriever = ParagraphRetriever::new();
                     let num_paragraphs = self.model.chunk_retriever.load_chunks(file);
 
                     if num_paragraphs == 0 {

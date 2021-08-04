@@ -1,7 +1,5 @@
-use std::collections::HashSet;
 use std::fs::File;
 use std::io::Read;
-use std::str::from_utf8;
 
 pub trait TextGrabber {
     // Returns the number of chunks parsed from some UTF-8 text file.
@@ -11,55 +9,40 @@ pub trait TextGrabber {
     fn len(&self) -> usize;
 }
 
-pub struct EnglishParagraphRetriever {
-    // Represents what characters constitute the end of some sentence.
-    delimiters: HashSet<String>,
+pub enum LangDelimiters {
+    English,
+}
 
+impl LangDelimiters {
+    fn value(&self) -> &[char] {
+        match self {
+            LangDelimiters::English => &['.', '?', '!'],
+        }
+    }
+}
+
+pub struct ParagraphRetriever {
+    language: LangDelimiters,
+    num_sentences: u8,
     paragraphs: Vec<String>,
 }
 
-impl TextGrabber for EnglishParagraphRetriever {
+impl TextGrabber for ParagraphRetriever {
     fn load_chunks(&mut self, mut text_file: File) -> u32 {
-        let mut current_paragraph: Vec<u8> = Vec::new();
+        let mut whole_text_content = String::new();
+        text_file
+            .read_to_string(&mut whole_text_content)
+            .expect("Could not read text file.");
 
-        // This approach allows to parse sentences with
-        // numerous endings to each.
-        let mut found_byte: [u8; 1] = [0; 1];
-        let mut sentence_count: u32 = 0;
-        while let Ok(num_bytes_read) = text_file.read(&mut found_byte) {
-            // It's assumed that this means we're at the End of the File.
-            if num_bytes_read == 0 {
-                break;
-            }
+        let language_delimiters = self.language.value();
+        let split_paragraphs: Vec<&str> = whole_text_content
+            .split_inclusive(language_delimiters)
+            .collect();
 
-            current_paragraph.push(found_byte[0]);
-            // There are cases where a UTF-8-based character
-            // has more than one byte to represent something beyond
-            // the ASCII set. This results in invalid UTF-8 characters at
-            // times without having foresight of its following bit.
-            if let Ok(found_char) = from_utf8(&found_byte) {
-                if self.delimiters.contains(found_char) {
-                    sentence_count += 1;
-                }
-            }
-
-            if sentence_count == 4 {
-                self.paragraphs
-                    .push(String::from_utf8(current_paragraph).expect("Invalid UTF-8 given."));
-                current_paragraph = Vec::new();
-                sentence_count = 0;
-            }
-        }
-
-        // This is meant to catch if there's an in-complete paragraph of some
-        // kind. For example, it may be the case that some text file ends with
-        // two, or even three sentences. Thus, this should be captured for
-        // completeness.
-        if !current_paragraph.is_empty() {
-            self.paragraphs
-                .push(String::from_utf8(current_paragraph).expect("Invalid UTF-8 given."));
-        }
-
+        self.paragraphs = split_paragraphs
+            .chunks(self.num_sentences as usize)
+            .map(|sentences| sentences.concat())
+            .collect();
         self.paragraphs.len() as u32
     }
 
@@ -76,15 +59,15 @@ impl TextGrabber for EnglishParagraphRetriever {
     }
 }
 
-impl EnglishParagraphRetriever {
-    pub fn new() -> Self {
-        let mut end_of_sentence_symbols = HashSet::new();
-        end_of_sentence_symbols.insert(String::from("."));
-        end_of_sentence_symbols.insert(String::from("?"));
-        end_of_sentence_symbols.insert(String::from("!"));
-
+impl ParagraphRetriever {
+    /// Returns a ParagraphRetriever with the following defaults:
+    /// - language is set to English,
+    /// - A paragraph consists of four sentences.
+    pub fn new() -> Self
+    {
         Self {
-            delimiters: end_of_sentence_symbols,
+            language: LangDelimiters::English,
+            num_sentences: 4,
             paragraphs: Vec::new(),
         }
     }
@@ -92,7 +75,7 @@ impl EnglishParagraphRetriever {
 
 #[cfg(test)]
 mod tests {
-    use crate::{EnglishParagraphRetriever, TextGrabber};
+    use crate::{ParagraphRetriever, TextGrabber};
     use std::fs::File;
     use std::io::Write;
     use std::io::{Seek, SeekFrom};
@@ -103,7 +86,7 @@ mod tests {
         write!(sample_file, "This is a complete sentence.").unwrap();
         sample_file.seek(SeekFrom::Start(0)).unwrap();
 
-        let mut paragraph_retriever = EnglishParagraphRetriever::new();
+        let mut paragraph_retriever = ParagraphRetriever::new();
         assert_eq!(paragraph_retriever.load_chunks(sample_file), 1);
 
         let read_result = paragraph_retriever.get_chunk(0);
@@ -123,7 +106,7 @@ mod tests {
         .unwrap();
         sample_file.seek(SeekFrom::Start(0)).unwrap();
 
-        let mut paragraph_retriever = EnglishParagraphRetriever::new();
+        let mut paragraph_retriever = ParagraphRetriever::new();
         assert_eq!(paragraph_retriever.load_chunks(sample_file), 1);
 
         let read_result = paragraph_retriever.get_chunk(0);
@@ -141,7 +124,7 @@ mod tests {
         let mut sample_file: File = tempfile::tempfile().unwrap();
         sample_file.seek(SeekFrom::Start(0)).unwrap();
 
-        let mut paragraph_retriever = EnglishParagraphRetriever::new();
+        let mut paragraph_retriever = ParagraphRetriever::new();
         assert_eq!(paragraph_retriever.load_chunks(sample_file), 0);
 
         let read_result = paragraph_retriever.get_chunk(0);
@@ -155,7 +138,7 @@ mod tests {
         write!(sample_file, "{}", paragraph.as_str()).unwrap();
         sample_file.seek(SeekFrom::Start(0)).unwrap();
 
-        let mut paragraph_retriever = EnglishParagraphRetriever::new();
+        let mut paragraph_retriever = ParagraphRetriever::new();
         assert_eq!(paragraph_retriever.load_chunks(sample_file), 1);
 
         let read_result = paragraph_retriever.get_chunk(0);
@@ -172,7 +155,7 @@ mod tests {
         write!(sample_file, "{}", paragraph.as_str()).unwrap();
         sample_file.seek(SeekFrom::Start(0)).unwrap();
 
-        let mut paragraph_retriever = EnglishParagraphRetriever::new();
+        let mut paragraph_retriever = ParagraphRetriever::new();
         assert_eq!(paragraph_retriever.load_chunks(sample_file), 1);
 
         let read_result = paragraph_retriever.get_chunk(1);
@@ -188,7 +171,7 @@ mod tests {
         write!(sample_file, "{}", second_paragraph.as_str()).unwrap();
         sample_file.seek(SeekFrom::Start(0)).unwrap();
 
-        let mut paragraph_retriever = EnglishParagraphRetriever::new();
+        let mut paragraph_retriever = ParagraphRetriever::new();
         assert_eq!(paragraph_retriever.load_chunks(sample_file), 2);
 
         let read_result = paragraph_retriever.get_chunk(1);
@@ -209,7 +192,7 @@ mod tests {
         write!(sample_file, "{}", second_paragraph.as_str()).unwrap();
         sample_file.seek(SeekFrom::Start(0)).unwrap();
 
-        let mut paragraph_retriever = EnglishParagraphRetriever::new();
+        let mut paragraph_retriever = ParagraphRetriever::new();
         assert_eq!(paragraph_retriever.load_chunks(sample_file), 2);
 
         let read_result = paragraph_retriever.get_chunk(1);
@@ -228,7 +211,7 @@ mod tests {
         write!(sample_file, "{}", second_paragraph.as_str()).unwrap();
         sample_file.seek(SeekFrom::Start(0)).unwrap();
 
-        let mut paragraph_retriever = EnglishParagraphRetriever::new();
+        let mut paragraph_retriever = ParagraphRetriever::new();
         assert_eq!(paragraph_retriever.load_chunks(sample_file), 2);
 
         assert!(paragraph_retriever.get_chunk(1).is_some());
