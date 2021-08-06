@@ -27,6 +27,7 @@ jobs:
           install: >-
             mingw-w64-x86_64-gtk3
             mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-pkg-config
             base-devel
 
       - uses: actions-rs/toolchain@v1
@@ -62,6 +63,7 @@ jobs:
           install: >-
             mingw-w64-x86_64-gtk3
             mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-pkg-config
             base-devel
 
       - uses: actions-rs/toolchain@v1
@@ -101,6 +103,7 @@ jobs:
           install: >-
             mingw-w64-x86_64-gtk3
             mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-pkg-config
             base-devel
 
       - uses: actions-rs/clippy-check@v1
