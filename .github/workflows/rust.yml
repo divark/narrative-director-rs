@@ -23,11 +23,11 @@ jobs:
       - if: matrix.os == 'windows-latest'
         uses: msys2/setup-msys2@v2
         with:
+          path-type: inherit
           update: true
           install: >-
             mingw-w64-x86_64-gtk3
             mingw-w64-x86_64-toolchain
-            mingw-w64-pkgconf
             base-devel
 
       - uses: actions-rs/toolchain@v1
@@ -59,11 +59,11 @@ jobs:
       - if: matrix.os == 'windows-latest'
         uses: msys2/setup-msys2@v2
         with:
+          path-type: inherit
           update: true
           install: >-
             mingw-w64-x86_64-gtk3
             mingw-w64-x86_64-toolchain
-            mingw-w64-pkgconf
             base-devel
 
       - uses: actions-rs/toolchain@v1
@@ -99,11 +99,11 @@ jobs:
       - if: matrix.os == 'windows-latest'
         uses: msys2/setup-msys2@v2
         with:
+          path-type: inherit
           update: true
           install: >-
             mingw-w64-x86_64-gtk3
             mingw-w64-x86_64-toolchain
-            mingw-w64-pkgconf
             base-devel
 
       - uses: actions-rs/clippy-check@v1
