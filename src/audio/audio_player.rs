@@ -40,7 +40,7 @@ fn output_stream_from(
     output_config.channels = channels;
     let output_data_fn = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
         for (dst, src) in data.iter_mut().zip(file_decoder.samples::<f32>()) {
-            *dst = src.unwrap();
+            *dst = src.unwrap_or(0.0);
         }
     };
 
