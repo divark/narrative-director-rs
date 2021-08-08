@@ -1,3 +1,10 @@
+/*
+* This is needed to ensure that the application
+* does not start with a console in the background
+* when the application runs on Windows.
+ */
+#![windows_subsystem = "windows"]
+
 mod audio;
 mod text_grabber;
 
@@ -16,7 +23,7 @@ use cpal::traits::DeviceTrait;
 use cpal::{ChannelCount, Device};
 use std::fs;
 use std::fs::{DirBuilder, File};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::{collections::HashMap, io::Read};
 use text_grabber::{ParagraphRetriever, TextGrabber};
 
@@ -307,12 +314,7 @@ impl Update for Win {
 
     fn model(_: &Relm<Self>, _: ()) -> Model {
         let chunk_retriever = ParagraphRetriever::new();
-        let project_directory = dirs::home_dir()
-            .unwrap()
-            .join("ND_Projects")
-            .to_str()
-            .unwrap()
-            .to_string();
+        let project_directory = dirs::audio_dir().unwrap().to_str().unwrap().to_string();
 
         Model {
             chunk_retriever,
@@ -730,19 +732,23 @@ impl Update for Win {
                     // mean that a session file was made.
                     if project_path.is_dir() {
                         let session_file_path = Path::new(&project_path).join(".session.json");
-                        assert!(session_file_path.is_file());
 
-                        let mut session_file =
-                            File::open(session_file_path).expect("Could not load session file.");
-                        let mut file_contents = String::new();
-                        session_file
-                            .read_to_string(&mut file_contents)
-                            .expect("Unable to read contents from session file.");
+                        if session_file_path.is_file() {
+                            let mut session_file = File::open(session_file_path)
+                                .expect("Could not load session file.");
+                            let mut file_contents = String::new();
+                            session_file
+                                .read_to_string(&mut file_contents)
+                                .expect("Unable to read contents from session file.");
 
-                        let session_info: ChunksSessionInfo = serde_json::from_str(&file_contents)
-                            .expect("Unable to parse JSON from session file.");
+                            let session_info: ChunksSessionInfo =
+                                serde_json::from_str(&file_contents)
+                                    .expect("Unable to parse JSON from session file.");
 
-                        self.model.chunk_number = session_info.current_paragraph_num;
+                            self.model.chunk_number = session_info.current_paragraph_num;
+                        } else {
+                            self.model.chunk_number = 0;
+                        }
                     } else {
                         let mut dir_builder = DirBuilder::new();
                         dir_builder.recursive(true);
@@ -959,6 +965,14 @@ impl Widget for Win {
 
         let window: Window = builder.object("window").unwrap();
         window.show_all();
+        let icon_location = PathBuf::new()
+            .join("resources")
+            .join("images")
+            .join("icon.png");
+
+        window
+            .set_icon_from_file(icon_location)
+            .expect("Could not load icon for application.");
 
         // Main Window Widgets
         let chunk_progress_label: Label = builder.object("chunk_position_lbl").unwrap();
@@ -987,7 +1001,7 @@ impl Widget for Win {
         let preferences_dialog: Dialog = builder.object("preferences_dialog").unwrap();
         // General - Preferences
         let project_file_chooser: FileChooser = builder.object("project_file_chooser").unwrap();
-        let home_directory = dirs::home_dir().unwrap().join("ND_Projects");
+        let home_directory = dirs::audio_dir().unwrap();
         let project_path = Path::new(home_directory.as_path());
         if !project_path.is_dir() {
             fs::create_dir(project_path).unwrap();
