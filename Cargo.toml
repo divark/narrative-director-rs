@@ -11,10 +11,7 @@ license = "gpl-3.0"
 gtk = "^0.14.0"
 relm = "^0.22.0"
 relm-derive = "^0.22.0"
-# Workaround for getting Windows builds to work as well in the meantime.
-# If merged from this thread, go back to using normal cpal:
-# https://github.com/RustAudio/cpal/pull/597
-cpal = { git="https://github.com/ishitatsuyuki/cpal", branch="com" }
+cpal = "^0.13.4"
 hound = "^3.4.0"
 dirs = "^3.0.2"
 serde = { version = "^1.0", features = ["derive"] }
