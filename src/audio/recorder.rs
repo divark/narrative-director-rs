@@ -201,7 +201,7 @@ impl CpalAudioRecorder {
 // cargo test -- --ignored
 #[cfg(test)]
 mod tests {
-    use crate::audio::audio_recorder::CpalAudioRecorder;
+    use crate::audio::recorder::CpalAudioRecorder;
     use std::fs;
     use std::thread::sleep;
     use std::time::Duration;

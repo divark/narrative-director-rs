@@ -1,11 +1,13 @@
-mod audio_player;
 mod audio_processor;
-mod audio_recorder;
+mod player;
+mod recorder;
+mod ui;
 
 pub mod prelude {
-    pub use super::audio_player::*;
     pub use super::audio_processor::*;
-    pub use super::audio_recorder::*;
+    pub use super::player::*;
+    pub use super::recorder::*;
+    pub use super::ui::*;
 
     #[derive(PartialEq)]
     pub enum ProcessingStatus {

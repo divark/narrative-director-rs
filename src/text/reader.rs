@@ -74,7 +74,7 @@ impl ParagraphRetriever {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ParagraphRetriever, TextGrabber};
+    use crate::text::{ParagraphRetriever, TextGrabber};
     use std::fs::File;
     use std::io::Write;
     use std::io::{Seek, SeekFrom};

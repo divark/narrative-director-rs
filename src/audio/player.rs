@@ -159,7 +159,7 @@ impl CpalAudioPlayer {
 // cargo test -- --ignored
 #[cfg(test)]
 mod tests {
-    use crate::audio::audio_player::CpalAudioPlayer;
+    use crate::audio::player::CpalAudioPlayer;
     use std::thread::sleep;
     use std::time::Duration;
 

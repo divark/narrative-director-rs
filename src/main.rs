@@ -5,9 +5,13 @@
  */
 #![windows_subsystem = "windows"]
 
-mod audio;
-mod text_grabber;
+use std::fs;
+use std::fs::{DirBuilder, File};
+use std::path::{Path, PathBuf};
+use std::{collections::HashMap, io::Read};
 
+use cpal::traits::DeviceTrait;
+use cpal::ChannelCount;
 use gtk::prelude::*;
 use gtk::{
     AboutDialog, Adjustment, Builder, Button, ComboBoxText, Dialog, DialogFlags, FileChooser,
@@ -15,19 +19,16 @@ use gtk::{
 };
 use relm::{connect, interval, Relm, Update, Widget};
 use relm_derive::Msg;
+use serde::{Deserialize, Serialize};
 
-use crate::Msg::ProgressTick;
+mod audio;
 use audio::prelude::*;
 use audio::ProcessingStatus;
-use cpal::traits::DeviceTrait;
-use cpal::{ChannelCount, Device};
-use std::fs;
-use std::fs::{DirBuilder, File};
-use std::path::{Path, PathBuf};
-use std::{collections::HashMap, io::Read};
-use text_grabber::{ParagraphRetriever, TextGrabber};
 
-use serde::{Deserialize, Serialize};
+mod text;
+use text::prelude::*;
+
+use crate::Msg::ProgressTick;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ChunksSessionInfo {
@@ -45,7 +46,7 @@ struct InputDevicesInfo {
 /// [Model-view-controller](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93controller),
 /// this model influences the logical flow of the
 /// application, depending on its current state.
-struct Model {
+pub struct Model {
     chunk_retriever: ParagraphRetriever,
     chunk_number: u32,
     chunk_total: u32,
@@ -87,7 +88,7 @@ enum Msg {
 /// Widgets serve as both a means of viewing, like Labels and Viewers,
 /// as well as hooks that spawn User Events, such as Buttons.
 #[derive(Clone)]
-struct Widgets {
+pub struct Widgets {
     // Main Window Widgets
     chunk_progress_label: Label,
     chunk_viewer: TextView,
@@ -121,32 +122,6 @@ struct Widgets {
     input_channels_cbox: ComboBoxText,
 
     output_device_cbox: ComboBoxText,
-}
-
-struct ChunkViewingUi<'a> {
-    progress_label: &'a Label,
-    chunk_viewer: &'a TextView,
-}
-
-/// Populates the UI with the specified chunk.
-fn show_chunk(
-    chunk_num: u32,
-    chunk_getter: &ParagraphRetriever,
-    ui: ChunkViewingUi,
-) -> Result<(), ()> {
-    if let Some(paragraph) = chunk_getter.get_chunk(chunk_num as usize) {
-        ui.progress_label
-            .set_text(format!("{}/{}", chunk_num + 1, chunk_getter.len()).as_str());
-
-        ui.chunk_viewer
-            .buffer()
-            .expect("Could not load TextView from Chunk Viewer")
-            .set_text(paragraph.as_str());
-
-        return Ok(());
-    }
-
-    Err(())
 }
 
 /// Makes previous button active or inactive depending on the chunk number.
@@ -187,112 +162,6 @@ fn reset_progress_bar_info(file_status: FileStatus, model: &mut Model, widgets: 
     widgets
         .progress_bar
         .set_adjustment(&Adjustment::new(0.0, 0.0, secs_total, 1.0, 1.0, 1.0));
-}
-
-/// Converts ms to hours:minutes:seconds format
-fn to_hh_mm_ss_str(ms: u32) -> String {
-    let seconds = ms / 1000;
-    let minutes = seconds / 60;
-    let hours = minutes / 60;
-
-    format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
-}
-
-/// Populates the choices available for input devices
-fn populate_input_options(input_options: &mut ComboBoxText, audio_io: &AudioIO) {
-    let input_devices = audio_io.get_input_devices();
-    input_options.remove_all();
-    for input_device in &input_devices {
-        let input_device_name = input_device.name().unwrap();
-
-        input_options.append_text(&input_device_name);
-    }
-
-    let default_input_pos = input_devices
-        .iter()
-        .position(|input_device| {
-            audio_io.get_input_device().name().unwrap() == *input_device.name().unwrap()
-        })
-        .unwrap() as u32;
-
-    input_options.set_active(Some(default_input_pos));
-}
-
-/// Populates the choices available for output devices
-fn populate_output_options(output_options: &mut ComboBoxText, audio_io: &AudioIO) {
-    let output_devices = audio_io.get_output_devices();
-    output_options.remove_all();
-    for output_device in &output_devices {
-        let output_device_name = output_device.name().unwrap();
-
-        output_options.append_text(&output_device_name);
-    }
-
-    let default_output_pos = output_devices
-        .iter()
-        .position(|output_device| {
-            audio_io.get_output_device().name().unwrap() == *output_device.name().unwrap()
-        })
-        .unwrap() as u32;
-
-    output_options.set_active(Some(default_output_pos));
-}
-
-/// Populates fields for given Input Device
-fn populate_input_preference_fields(input_device: &Device, model: &Model, widgets: &mut Widgets) {
-    // Starting with the channels
-    widgets.input_channels_cbox.remove_all();
-    let input_device_channels = model
-        .input_devices_info
-        .as_ref()
-        .unwrap()
-        .channels
-        .get(&input_device.name().unwrap())
-        .unwrap();
-
-    for default_input_channel in input_device_channels {
-        widgets
-            .input_channels_cbox
-            .append_text(&default_input_channel.to_string());
-    }
-
-    // Setting the combo box to point to the value of the default channel.
-    let current_channel_pos = input_device_channels
-        .iter()
-        .position(|channel| input_device.default_input_config().unwrap().channels() == *channel)
-        .unwrap() as u32;
-
-    widgets
-        .input_channels_cbox
-        .set_active(Some(current_channel_pos));
-
-    // Then the sample rates
-    widgets.input_sample_rate_cbox.remove_all();
-    let input_device_sample_rates = model
-        .input_devices_info
-        .as_ref()
-        .unwrap()
-        .sample_rates
-        .get(&input_device.name().unwrap())
-        .unwrap();
-
-    for default_input_sample_rate in input_device_sample_rates {
-        widgets
-            .input_sample_rate_cbox
-            .append_text(&default_input_sample_rate.to_string());
-    }
-
-    // Setting the combo box to point to the value of the default sample rate..
-    let current_sample_rate_pos = input_device_sample_rates
-        .iter()
-        .position(|sample_rate| {
-            input_device.default_input_config().unwrap().sample_rate().0 == *sample_rate
-        })
-        .unwrap() as u32;
-
-    widgets
-        .input_sample_rate_cbox
-        .set_active(Some(current_sample_rate_pos));
 }
 
 /// Abstracts the whole application, merging
