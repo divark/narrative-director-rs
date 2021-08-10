@@ -14,8 +14,9 @@ use cpal::traits::DeviceTrait;
 use cpal::ChannelCount;
 use gtk::prelude::*;
 use gtk::{
-    AboutDialog, Adjustment, Builder, Button, ComboBoxText, Dialog, DialogFlags, FileChooser,
-    FileFilter, Inhibit, Label, MenuItem, ResponseType, Scrollbar, SpinButton, TextView, Window,
+    AboutDialog, Adjustment, Builder, Button, ComboBoxText, Dialog, DialogFlags, EventBox,
+    FileChooser, FileFilter, Inhibit, Label, MenuItem, ResponseType, Scrollbar, SpinButton,
+    TextView, Window,
 };
 use relm::{connect, interval, Relm, Update, Widget};
 use relm_derive::Msg;
@@ -91,6 +92,7 @@ enum Msg {
 pub struct Widgets {
     // Main Window Widgets
     chunk_progress_label: Label,
+    chunk_progress_eventbox: EventBox,
     chunk_viewer: TextView,
 
     previous_chunk_button: Button,
@@ -362,6 +364,8 @@ impl Update for Win {
 
                 let goto_spin_button =
                     SpinButton::with_range(1.0, self.model.chunk_total as f64, 1.0);
+                goto_spin_button.set_activates_default(true);
+
                 content_area.add(&goto_spin_button);
 
                 goto_dialog.show_all();
@@ -846,6 +850,7 @@ impl Widget for Win {
         // Main Window Widgets
         let chunk_progress_label: Label = builder.object("chunk_position_lbl").unwrap();
         let text_viewer: TextView = builder.object("chunk_view_txtviewer").unwrap();
+        let chunk_progress_eventbox: EventBox = builder.object("chunk_progress_eventbox").unwrap();
 
         // Media IO Items
         let prev_button: Button = builder.object("prev_chunk_btn").unwrap();
@@ -887,6 +892,13 @@ impl Widget for Win {
         let mut output_device_cbox: ComboBoxText = builder.object("output_device_cbox").unwrap();
         populate_output_options(&mut output_device_cbox, &model.audio_processor);
 
+        connect!(
+            relm,
+            chunk_progress_eventbox,
+            connect_button_press_event(_, _),
+            return (Some(Msg::JumpTo), Inhibit(false))
+        );
+
         connect!(relm, prev_button, connect_clicked(_), Msg::Previous);
         connect!(relm, next_button, connect_clicked(_), Msg::Next);
         connect!(relm, stop_button, connect_clicked(_), Msg::Stop);
@@ -916,6 +928,7 @@ impl Widget for Win {
             widgets: Widgets {
                 chunk_progress_label,
                 chunk_viewer: text_viewer,
+                chunk_progress_eventbox,
 
                 previous_chunk_button: prev_button,
                 next_chunk_button: next_button,
