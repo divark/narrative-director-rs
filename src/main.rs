@@ -15,8 +15,7 @@ use cpal::ChannelCount;
 use gtk::prelude::*;
 use gtk::{
     AboutDialog, Adjustment, Builder, Button, ComboBoxText, Dialog, DialogFlags, EventBox,
-    FileChooser, FileFilter, Inhibit, Label, MenuItem, ResponseType, Scrollbar, SpinButton,
-    TextView, Window,
+    FileChooser, Inhibit, Label, MenuItem, ResponseType, Scrollbar, SpinButton, TextView, Window,
 };
 use relm::{connect, interval, Relm, Update, Widget};
 use relm_derive::Msg;
@@ -164,6 +163,36 @@ fn reset_progress_bar_info(file_status: FileStatus, model: &mut Model, widgets: 
     widgets
         .progress_bar
         .set_adjustment(&Adjustment::new(0.0, 0.0, secs_total, 1.0, 1.0, 1.0));
+}
+
+/// Returns if the Project directory has been created.
+fn create_project_dir_from(project_path: &PathBuf) -> bool {
+    if project_path.is_dir() {
+        return false;
+    }
+
+    let mut dir_builder = DirBuilder::new();
+    dir_builder.recursive(true);
+
+    dir_builder.create(project_path).is_ok()
+}
+
+/// Returns the chunk number from a given session file, or zero if none was found.
+fn get_session_chunk_number(session_path: PathBuf) -> u32 {
+    if !session_path.is_file() {
+        return 0;
+    }
+
+    let mut session_file = File::open(session_path).expect("Could not load session file.");
+    let mut file_contents = String::new();
+    session_file
+        .read_to_string(&mut file_contents)
+        .expect("Unable to read contents from session file.");
+
+    let session_info: ChunksSessionInfo =
+        serde_json::from_str(&file_contents).expect("Unable to parse JSON from session file.");
+
+    return session_info.current_paragraph_num;
 }
 
 /// Abstracts the whole application, merging
@@ -564,156 +593,95 @@ impl Update for Win {
                 self.widgets.preferences_dialog.hide();
             }
             Msg::LoadFile => {
-                let file_chooser = gtk::FileChooserDialog::new(
-                    Some("Open File"),
-                    Some(&self.widgets.window),
-                    gtk::FileChooserAction::Open,
-                );
-
-                file_chooser.add_buttons(&[
-                    ("Open", gtk::ResponseType::Ok),
-                    ("Cancel", gtk::ResponseType::Cancel),
-                ]);
-
-                let text_file_filter = FileFilter::new();
-                text_file_filter.set_name(Some("UTF-8 Text Files"));
-                text_file_filter.add_pattern("*.txt");
-
-                file_chooser.add_filter(&text_file_filter);
-
-                let file_chooser_response = file_chooser.run();
-                if file_chooser_response == ResponseType::Ok {
-                    // Start by making a new paragraph parser with the given file.
-                    let filename = file_chooser.filename().expect("Couldn't get filename");
-                    let file = File::open(&filename).expect("Couldn't open file");
-
-                    self.model.chunk_retriever = ParagraphRetriever::new();
-                    let num_paragraphs = self.model.chunk_retriever.load_chunks(file);
-
-                    if num_paragraphs == 0 {
-                        return;
-                    }
-
-                    self.model.chunk_total = num_paragraphs;
-
-                    // Then redirect where the audio files will be read/written to the
-                    // current project directory.
-                    let project_path = Path::new(&self.model.project_directory)
-                        .join(filename.file_stem().unwrap());
-
-                    // Load the user's last position, since the project path existing must
-                    // mean that a session file was made.
-                    if project_path.is_dir() {
-                        let session_file_path = Path::new(&project_path).join(".session.json");
-
-                        if session_file_path.is_file() {
-                            let mut session_file = File::open(session_file_path)
-                                .expect("Could not load session file.");
-                            let mut file_contents = String::new();
-                            session_file
-                                .read_to_string(&mut file_contents)
-                                .expect("Unable to read contents from session file.");
-
-                            let session_info: ChunksSessionInfo =
-                                serde_json::from_str(&file_contents)
-                                    .expect("Unable to parse JSON from session file.");
-
-                            self.model.chunk_number = session_info.current_paragraph_num;
-                        } else {
-                            self.model.chunk_number = 0;
-                        }
-                    } else {
-                        let mut dir_builder = DirBuilder::new();
-                        dir_builder.recursive(true);
-
-                        dir_builder.create(project_path.clone()).unwrap();
-                        self.model.chunk_number = 0;
-                    }
-
-                    self.model.current_filename =
-                        filename.file_stem().unwrap().to_str().unwrap().to_string();
-
-                    // Also, reload the audio processor to utilize the new
-                    // project path.
-                    self.model.audio_processor = AudioIO::new(
-                        self.model.chunk_total as usize,
-                        project_path.to_str().unwrap().to_string(),
-                    );
-
-                    // Keep the input and output selections in preferences if the user has
-                    // already specified their devices.
-                    if self.model.preferences_has_been_shown_once {
-                        let sample_rate_choice = self
-                            .widgets
-                            .input_sample_rate_cbox
-                            .active_text()
-                            .unwrap()
-                            .to_string();
-                        let sample_rate = sample_rate_choice.parse::<u32>().unwrap();
-
-                        let channel_choice = self
-                            .widgets
-                            .input_channels_cbox
-                            .active_text()
-                            .unwrap()
-                            .to_string();
-                        let num_channels = channel_choice.parse::<u16>().unwrap();
-
-                        let input_info = InputDeviceSelection {
-                            name: self
-                                .widgets
-                                .input_device_cbox
-                                .active_text()
-                                .unwrap()
-                                .to_string(),
-                            sample_rate,
-                            num_channels,
-                        };
-
-                        let output_info = OutputDeviceInfo {
-                            name: self
-                                .widgets
-                                .output_device_cbox
-                                .active_text()
-                                .unwrap()
-                                .to_string(),
-                        };
-
-                        self.model.audio_processor.set_input_device(input_info);
-                        self.model.audio_processor.set_output_device(output_info);
-                    }
-
-                    // Finally, make the right buttons active depending on what chunks are available.
-                    show_chunk(
-                        self.model.chunk_number,
-                        &self.model.chunk_retriever,
-                        paragraph_ui,
-                    )
-                    .unwrap();
-
-                    change_prev_button_sensitivity(
-                        self.model.chunk_number,
-                        &self.widgets.previous_chunk_button,
-                    );
-
-                    change_next_button_sensitivity(
-                        self.model.chunk_number,
-                        self.model.chunk_total,
-                        &self.widgets.next_chunk_button,
-                    );
-
-                    self.widgets.goto_menu_item.set_sensitive(true);
-                    self.widgets.record_button.set_sensitive(true);
-
-                    let file_status = self
-                        .model
-                        .audio_processor
-                        .go_to(self.model.chunk_number as usize)
-                        .unwrap();
-                    reset_progress_bar_info(file_status, &mut self.model, &self.widgets);
+                // First, we get the user chosen text file.
+                let user_chosen_file = get_text_file_from_user(&self.widgets.window);
+                if user_chosen_file.is_none() {
+                    return;
                 }
 
-                file_chooser.close();
+                let text_file_path = user_chosen_file.unwrap();
+                let text_filename = text_file_path.file_stem().unwrap().to_str().unwrap();
+                let text_file = File::open(&text_file_path).expect("Couldn't open file");
+
+                self.model.chunk_retriever = ParagraphRetriever::new();
+                let num_paragraphs = self.model.chunk_retriever.load_chunks(text_file);
+                if num_paragraphs == 0 {
+                    return;
+                }
+
+                self.model.chunk_total = num_paragraphs;
+
+                // Then redirect where the audio files will be read/written to the
+                // current project directory.
+                let project_path = Path::new(&self.model.project_directory).join(text_filename);
+
+                create_project_dir_from(&project_path);
+
+                // Load the user's last position, since the project path existing must
+                // mean that a session file was made.
+                let session_file_path = Path::new(&project_path).join(".session.json");
+                self.model.chunk_number = get_session_chunk_number(session_file_path);
+
+                // Also, reload the audio processor to utilize the new
+                // project path.
+                self.model.audio_processor = AudioIO::new(
+                    self.model.chunk_total as usize,
+                    project_path.to_str().unwrap().to_string(),
+                );
+
+                // Keep the input and output selections in preferences if the user has
+                // already specified their devices.
+                if self.model.preferences_has_been_shown_once {
+                    let input_widgets = InputPreferenceWidgets {
+                        input_device_cbox: &self.widgets.input_device_cbox,
+                        sample_rate_cbox: &self.widgets.input_sample_rate_cbox,
+                        channels_cbox: &self.widgets.input_channels_cbox,
+                    };
+
+                    let input_info = get_input_selection_from(input_widgets);
+
+                    let output_info = OutputDeviceInfo {
+                        name: self
+                            .widgets
+                            .output_device_cbox
+                            .active_text()
+                            .unwrap()
+                            .to_string(),
+                    };
+
+                    self.model.audio_processor.set_input_device(input_info);
+                    self.model.audio_processor.set_output_device(output_info);
+                }
+
+                // Finally, make the right buttons active depending on what chunks are available.
+                show_chunk(
+                    self.model.chunk_number,
+                    &self.model.chunk_retriever,
+                    paragraph_ui,
+                )
+                .unwrap();
+
+                // TODO: Condense this into one method in text/ui.rs
+                change_prev_button_sensitivity(
+                    self.model.chunk_number,
+                    &self.widgets.previous_chunk_button,
+                );
+
+                change_next_button_sensitivity(
+                    self.model.chunk_number,
+                    self.model.chunk_total,
+                    &self.widgets.next_chunk_button,
+                );
+
+                self.widgets.goto_menu_item.set_sensitive(true);
+                self.widgets.record_button.set_sensitive(true);
+
+                let file_status = self
+                    .model
+                    .audio_processor
+                    .go_to(self.model.chunk_number as usize)
+                    .unwrap();
+                reset_progress_bar_info(file_status, &mut self.model, &self.widgets);
             }
             Msg::Quit => {
                 if !self.model.current_filename.is_empty() {

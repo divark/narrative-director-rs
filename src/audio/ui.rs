@@ -1,4 +1,4 @@
-use crate::audio::AudioIO;
+use crate::audio::{AudioIO, InputDeviceSelection};
 use crate::{Model, Widgets};
 use cpal::traits::DeviceTrait;
 use cpal::Device;
@@ -113,4 +113,38 @@ pub fn populate_input_preference_fields(
     widgets
         .input_sample_rate_cbox
         .set_active(Some(current_sample_rate_pos));
+}
+
+pub struct InputPreferenceWidgets<'a> {
+    pub input_device_cbox: &'a ComboBoxText,
+    pub sample_rate_cbox: &'a ComboBoxText,
+    pub channels_cbox: &'a ComboBoxText,
+}
+
+/// Returns an InputDeviceSelection from a user's choices in the Audio tab, under the
+/// Input section.
+pub fn get_input_selection_from(input_widgets: InputPreferenceWidgets) -> InputDeviceSelection {
+    let sample_rate_choice = input_widgets
+        .sample_rate_cbox
+        .active_text()
+        .unwrap()
+        .to_string();
+    let sample_rate = sample_rate_choice.parse::<u32>().unwrap();
+
+    let channel_choice = input_widgets
+        .channels_cbox
+        .active_text()
+        .unwrap()
+        .to_string();
+    let num_channels = channel_choice.parse::<u16>().unwrap();
+
+    InputDeviceSelection {
+        name: input_widgets
+            .input_device_cbox
+            .active_text()
+            .unwrap()
+            .to_string(),
+        sample_rate,
+        num_channels,
+    }
 }
