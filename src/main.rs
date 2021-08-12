@@ -125,24 +125,6 @@ pub struct Widgets {
     output_device_cbox: ComboBoxText,
 }
 
-/// Makes previous button active or inactive depending on the chunk number.
-fn change_prev_button_sensitivity(chunk_num: u32, prev_button: &Button) {
-    if chunk_num > 0 {
-        prev_button.set_sensitive(true);
-    } else {
-        prev_button.set_sensitive(false);
-    }
-}
-
-/// Makes next button active or inactive relative to the chunk number and the total.
-fn change_next_button_sensitivity(chunk_num: u32, chunk_total: u32, next_button: &Button) {
-    if chunk_num == chunk_total - 1 {
-        next_button.set_sensitive(false);
-    } else {
-        next_button.set_sensitive(true);
-    }
-}
-
 /// Makes play button active or inactive relative to the file status.
 fn change_play_button_sensitivity(file_status: FileStatus, play_button: &Button) {
     if file_status == FileStatus::Exists {
@@ -166,7 +148,7 @@ fn reset_progress_bar_info(file_status: FileStatus, model: &mut Model, widgets: 
 }
 
 /// Returns if the Project directory has been created.
-fn create_project_dir_from(project_path: &PathBuf) -> bool {
+fn create_project_dir_from(project_path: &Path) -> bool {
     if project_path.is_dir() {
         return false;
     }
@@ -192,7 +174,7 @@ fn get_session_chunk_number(session_path: PathBuf) -> u32 {
     let session_info: ChunksSessionInfo =
         serde_json::from_str(&file_contents).expect("Unable to parse JSON from session file.");
 
-    return session_info.current_paragraph_num;
+    session_info.current_paragraph_num
 }
 
 /// Abstracts the whole application, merging
@@ -297,12 +279,18 @@ impl Update for Win {
                 {
                     self.model.chunk_number += 1;
 
-                    self.widgets.previous_chunk_button.set_sensitive(true);
-                    change_next_button_sensitivity(
-                        self.model.chunk_number,
-                        self.model.chunk_total,
-                        &self.widgets.next_chunk_button,
-                    );
+                    let text_widgets = TextNavigationWidgets {
+                        previous_button: &self.widgets.previous_chunk_button,
+                        next_button: &self.widgets.next_chunk_button,
+                        goto_menu: &self.widgets.goto_menu_item,
+                    };
+
+                    let text_progress = TextNavigationProgress {
+                        current_index: self.model.chunk_number,
+                        total: self.model.chunk_total,
+                    };
+
+                    toggle_text_navigation_widgets(text_widgets, text_progress);
 
                     if let Ok(file_status) = self.model.audio_processor.next() {
                         change_play_button_sensitivity(file_status, &self.widgets.play_button);
@@ -348,11 +336,18 @@ impl Update for Win {
                 {
                     self.model.chunk_number -= 1;
 
-                    self.widgets.next_chunk_button.set_sensitive(true);
-                    change_prev_button_sensitivity(
-                        self.model.chunk_number,
-                        &self.widgets.previous_chunk_button,
-                    );
+                    let text_widgets = TextNavigationWidgets {
+                        previous_button: &self.widgets.previous_chunk_button,
+                        next_button: &self.widgets.next_chunk_button,
+                        goto_menu: &self.widgets.goto_menu_item,
+                    };
+
+                    let text_progress = TextNavigationProgress {
+                        current_index: self.model.chunk_number,
+                        total: self.model.chunk_total,
+                    };
+
+                    toggle_text_navigation_widgets(text_widgets, text_progress);
 
                     if let Ok(file_status) = self.model.audio_processor.prev() {
                         change_play_button_sensitivity(file_status, &self.widgets.play_button);
@@ -411,15 +406,18 @@ impl Update for Win {
                     {
                         self.model.chunk_number = goto_paragraph_num;
 
-                        change_next_button_sensitivity(
-                            self.model.chunk_number,
-                            self.model.chunk_total,
-                            &self.widgets.next_chunk_button,
-                        );
-                        change_prev_button_sensitivity(
-                            self.model.chunk_number,
-                            &self.widgets.previous_chunk_button,
-                        );
+                        let text_widgets = TextNavigationWidgets {
+                            previous_button: &self.widgets.previous_chunk_button,
+                            next_button: &self.widgets.next_chunk_button,
+                            goto_menu: &self.widgets.goto_menu_item,
+                        };
+
+                        let text_progress = TextNavigationProgress {
+                            current_index: self.model.chunk_number,
+                            total: self.model.chunk_total,
+                        };
+
+                        toggle_text_navigation_widgets(text_widgets, text_progress);
 
                         if let Ok(file_status) = self
                             .model
@@ -512,12 +510,7 @@ impl Update for Win {
                     let project_path = self.widgets.project_file_chooser.filename().unwrap();
 
                     let new_directory = project_path.join(&self.model.current_filename);
-                    if !new_directory.is_dir() {
-                        let mut dir_builder = DirBuilder::new();
-                        dir_builder.recursive(true);
-
-                        dir_builder.create(new_directory.clone()).unwrap();
-                    }
+                    create_project_dir_from(&new_directory);
 
                     self.model.project_directory = project_path.to_str().unwrap().to_string();
                     self.model.audio_processor = AudioIO::new(
@@ -525,41 +518,18 @@ impl Update for Win {
                         new_directory.to_str().unwrap().to_string(),
                     );
 
-                    let sample_rate_choice = self
-                        .widgets
-                        .input_sample_rate_cbox
-                        .active_text()
-                        .unwrap()
-                        .to_string();
-                    let sample_rate = sample_rate_choice.parse::<u32>().unwrap();
-
-                    let channel_choice = self
-                        .widgets
-                        .input_channels_cbox
-                        .active_text()
-                        .unwrap()
-                        .to_string();
-                    let num_channels = channel_choice.parse::<u16>().unwrap();
-
-                    let input_info = InputDeviceSelection {
-                        name: self
-                            .widgets
-                            .input_device_cbox
-                            .active_text()
-                            .unwrap()
-                            .to_string(),
-                        sample_rate,
-                        num_channels,
+                    let input_widgets = InputPreferenceWidgets {
+                        input_device_cbox: &self.widgets.input_device_cbox,
+                        sample_rate_cbox: &self.widgets.input_sample_rate_cbox,
+                        channels_cbox: &self.widgets.input_channels_cbox,
                     };
 
-                    let output_info = OutputDeviceInfo {
-                        name: self
-                            .widgets
-                            .output_device_cbox
-                            .active_text()
-                            .unwrap()
-                            .to_string(),
+                    let output_widgets = OutputPreferenceWidgets {
+                        output_device_cbox: &self.widgets.output_device_cbox,
                     };
+
+                    let input_info = get_input_selection_from(input_widgets);
+                    let output_info = get_output_selection_from(output_widgets);
 
                     self.model.audio_processor.set_input_device(input_info);
                     self.model.audio_processor.set_output_device(output_info);
@@ -638,16 +608,12 @@ impl Update for Win {
                         channels_cbox: &self.widgets.input_channels_cbox,
                     };
 
-                    let input_info = get_input_selection_from(input_widgets);
-
-                    let output_info = OutputDeviceInfo {
-                        name: self
-                            .widgets
-                            .output_device_cbox
-                            .active_text()
-                            .unwrap()
-                            .to_string(),
+                    let output_widgets = OutputPreferenceWidgets {
+                        output_device_cbox: &self.widgets.output_device_cbox,
                     };
+
+                    let input_info = get_input_selection_from(input_widgets);
+                    let output_info = get_output_selection_from(output_widgets);
 
                     self.model.audio_processor.set_input_device(input_info);
                     self.model.audio_processor.set_output_device(output_info);
@@ -661,19 +627,18 @@ impl Update for Win {
                 )
                 .unwrap();
 
-                // TODO: Condense this into one method in text/ui.rs
-                change_prev_button_sensitivity(
-                    self.model.chunk_number,
-                    &self.widgets.previous_chunk_button,
-                );
+                let text_widgets = TextNavigationWidgets {
+                    previous_button: &self.widgets.previous_chunk_button,
+                    next_button: &self.widgets.next_chunk_button,
+                    goto_menu: &self.widgets.goto_menu_item,
+                };
 
-                change_next_button_sensitivity(
-                    self.model.chunk_number,
-                    self.model.chunk_total,
-                    &self.widgets.next_chunk_button,
-                );
+                let text_progress = TextNavigationProgress {
+                    current_index: self.model.chunk_number,
+                    total: self.model.chunk_total,
+                };
 
-                self.widgets.goto_menu_item.set_sensitive(true);
+                toggle_text_navigation_widgets(text_widgets, text_progress);
                 self.widgets.record_button.set_sensitive(true);
 
                 let file_status = self
@@ -758,15 +723,18 @@ impl Update for Win {
 
                 self.widgets.stop_button.set_sensitive(false);
 
-                change_prev_button_sensitivity(
-                    self.model.chunk_number,
-                    &self.widgets.previous_chunk_button,
-                );
-                change_next_button_sensitivity(
-                    self.model.chunk_number,
-                    self.model.chunk_total,
-                    &self.widgets.next_chunk_button,
-                );
+                let text_widgets = TextNavigationWidgets {
+                    previous_button: &self.widgets.previous_chunk_button,
+                    next_button: &self.widgets.next_chunk_button,
+                    goto_menu: &self.widgets.goto_menu_item,
+                };
+
+                let text_progress = TextNavigationProgress {
+                    current_index: self.model.chunk_number,
+                    total: self.model.chunk_total,
+                };
+
+                toggle_text_navigation_widgets(text_widgets, text_progress);
 
                 self.model.ms_passed = 0;
 

@@ -1,8 +1,9 @@
 use crate::text::{ParagraphRetriever, TextGrabber};
 use gtk::prelude::{
     DialogExt, DialogExtManual, FileChooserExt, GtkWindowExt, LabelExt, TextBufferExt, TextViewExt,
+    WidgetExt,
 };
-use gtk::{FileFilter, Label, ResponseType, TextView, Window};
+use gtk::{Button, FileFilter, Label, MenuItem, ResponseType, TextView, Window};
 
 use std::path::PathBuf;
 
@@ -65,4 +66,37 @@ pub fn get_text_file_from_user(parent_window: &Window) -> Option<PathBuf> {
     let filename = file_chooser.filename().expect("Couldn't get filename");
 
     Some(filename)
+}
+
+pub struct TextNavigationWidgets<'a> {
+    pub previous_button: &'a Button,
+    pub next_button: &'a Button,
+
+    pub goto_menu: &'a MenuItem,
+}
+
+pub struct TextNavigationProgress {
+    pub current_index: u32,
+    pub total: u32,
+}
+
+pub fn toggle_text_navigation_widgets(
+    text_widgets: TextNavigationWidgets,
+    text_progress: TextNavigationProgress,
+) {
+    // 1: Activate the Previous button so as long as I'm not at the origin.
+    if text_progress.current_index > 0 {
+        text_widgets.previous_button.set_sensitive(true);
+    } else {
+        text_widgets.previous_button.set_sensitive(false);
+    }
+
+    // 2: Activate the Next button so as long as I'm not at the end.
+    if text_progress.current_index == text_progress.total - 1 {
+        text_widgets.next_button.set_sensitive(false);
+    } else {
+        text_widgets.next_button.set_sensitive(true);
+    }
+
+    text_widgets.goto_menu.set_sensitive(true);
 }

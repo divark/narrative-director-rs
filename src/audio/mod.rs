@@ -29,7 +29,7 @@ pub mod prelude {
         pub num_channels: u16,
     }
 
-    pub struct OutputDeviceInfo {
+    pub struct OutputDeviceSelection {
         pub name: String,
     }
 

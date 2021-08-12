@@ -1,4 +1,4 @@
-use crate::audio::{AudioIO, InputDeviceSelection};
+use crate::audio::{AudioIO, InputDeviceSelection, OutputDeviceSelection};
 use crate::{Model, Widgets};
 use cpal::traits::DeviceTrait;
 use cpal::Device;
@@ -146,5 +146,21 @@ pub fn get_input_selection_from(input_widgets: InputPreferenceWidgets) -> InputD
             .to_string(),
         sample_rate,
         num_channels,
+    }
+}
+
+pub struct OutputPreferenceWidgets<'a> {
+    pub output_device_cbox: &'a ComboBoxText,
+}
+
+/// Returns an OutputDeviceSelection from a user's choices in the Audio tab, under the
+/// output section.
+pub fn get_output_selection_from(output_widgets: OutputPreferenceWidgets) -> OutputDeviceSelection {
+    OutputDeviceSelection {
+        name: output_widgets
+            .output_device_cbox
+            .active_text()
+            .unwrap()
+            .to_string(),
     }
 }

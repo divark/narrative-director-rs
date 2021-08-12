@@ -62,7 +62,7 @@ impl AudioIO {
         );
     }
 
-    pub fn set_output_device(&mut self, output_info: OutputDeviceInfo) {
+    pub fn set_output_device(&mut self, output_info: OutputDeviceSelection) {
         let new_output_device = if output_info.name == "default" {
             default_host().default_output_device().unwrap()
         } else {
