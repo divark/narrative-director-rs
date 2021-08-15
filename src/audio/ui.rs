@@ -1,9 +1,9 @@
-use crate::audio::{AudioIO, InputDeviceSelection, OutputDeviceSelection};
-use crate::{Model, Widgets};
+use crate::audio::{AudioIO, FileStatus, InputDeviceSelection, OutputDeviceSelection};
+use crate::InputDevicesInfo;
 use cpal::traits::DeviceTrait;
 use cpal::Device;
-use gtk::prelude::{ComboBoxExtManual, ComboBoxTextExt};
-use gtk::ComboBoxText;
+use gtk::prelude::{ComboBoxExtManual, ComboBoxTextExt, LabelExt, RangeExt, WidgetExt};
+use gtk::{Adjustment, Button, ComboBoxText, Label, Scrollbar};
 
 /// Converts ms to hours:minutes:seconds format
 pub fn to_hh_mm_ss_str(ms: u32) -> String {
@@ -57,22 +57,19 @@ pub fn populate_output_options(output_options: &mut ComboBoxText, audio_io: &Aud
 /// Populates fields for given Input Device
 pub fn populate_input_preference_fields(
     input_device: &Device,
-    model: &Model,
-    widgets: &mut Widgets,
+    input_devices_info: &InputDevicesInfo,
+    input_widgets: &InputPreferenceWidgets,
 ) {
     // Starting with the channels
-    widgets.input_channels_cbox.remove_all();
-    let input_device_channels = model
-        .input_devices_info
-        .as_ref()
-        .unwrap()
+    input_widgets.channels_cbox.remove_all();
+    let input_device_channels = input_devices_info
         .channels
         .get(&input_device.name().unwrap())
         .unwrap();
 
     for default_input_channel in input_device_channels {
-        widgets
-            .input_channels_cbox
+        input_widgets
+            .channels_cbox
             .append_text(&default_input_channel.to_string());
     }
 
@@ -82,23 +79,20 @@ pub fn populate_input_preference_fields(
         .position(|channel| input_device.default_input_config().unwrap().channels() == *channel)
         .unwrap() as u32;
 
-    widgets
-        .input_channels_cbox
+    input_widgets
+        .channels_cbox
         .set_active(Some(current_channel_pos));
 
     // Then the sample rates
-    widgets.input_sample_rate_cbox.remove_all();
-    let input_device_sample_rates = model
-        .input_devices_info
-        .as_ref()
-        .unwrap()
+    input_widgets.sample_rate_cbox.remove_all();
+    let input_device_sample_rates = input_devices_info
         .sample_rates
         .get(&input_device.name().unwrap())
         .unwrap();
 
     for default_input_sample_rate in input_device_sample_rates {
-        widgets
-            .input_sample_rate_cbox
+        input_widgets
+            .sample_rate_cbox
             .append_text(&default_input_sample_rate.to_string());
     }
 
@@ -110,15 +104,15 @@ pub fn populate_input_preference_fields(
         })
         .unwrap() as u32;
 
-    widgets
-        .input_sample_rate_cbox
+    input_widgets
+        .sample_rate_cbox
         .set_active(Some(current_sample_rate_pos));
 }
 
 pub struct InputPreferenceWidgets<'a> {
-    pub input_device_cbox: &'a ComboBoxText,
-    pub sample_rate_cbox: &'a ComboBoxText,
-    pub channels_cbox: &'a ComboBoxText,
+    pub input_device_cbox: &'a mut ComboBoxText,
+    pub sample_rate_cbox: &'a mut ComboBoxText,
+    pub channels_cbox: &'a mut ComboBoxText,
 }
 
 /// Returns an InputDeviceSelection from a user's choices in the Audio tab, under the
@@ -163,4 +157,52 @@ pub fn get_output_selection_from(output_widgets: OutputPreferenceWidgets) -> Out
             .unwrap()
             .to_string(),
     }
+}
+
+/// Makes play button active or inactive relative to the file status.
+pub fn change_play_button_sensitivity(file_status: FileStatus, play_button: &Button) {
+    if file_status == FileStatus::Exists {
+        play_button.set_sensitive(true);
+    } else {
+        play_button.set_sensitive(false);
+    }
+}
+
+pub struct AudioPlaybackWidgets<'a> {
+    pub progress_bar: &'a Scrollbar,
+    pub progress_text: &'a Label,
+}
+
+pub struct AudioPlaybackProgress {
+    pub ms_passed: u32,
+    pub ms_total: u32,
+}
+
+/// Refreshes UI to take into account new audio file and its properties, such as length,
+/// current progress, etc.
+pub fn update_playback_widgets(
+    playback_widgets: AudioPlaybackWidgets,
+    playback_progress: AudioPlaybackProgress,
+) {
+    let secs_passed = (playback_progress.ms_passed / 1000) as f64;
+    let secs_total = (playback_progress.ms_total / 1000) as f64;
+    playback_widgets
+        .progress_bar
+        .set_adjustment(&Adjustment::new(
+            secs_passed,
+            0.0,
+            secs_total,
+            1.0,
+            1.0,
+            1.0,
+        ));
+
+    let progress_text = format!(
+        "{}/{}",
+        to_hh_mm_ss_str(playback_progress.ms_passed),
+        to_hh_mm_ss_str(playback_progress.ms_total)
+    );
+    playback_widgets
+        .progress_text
+        .set_markup(progress_text.as_str());
 }

@@ -35,7 +35,7 @@ struct ChunksSessionInfo {
     current_paragraph_num: u32,
 }
 
-struct InputDevicesInfo {
+pub struct InputDevicesInfo {
     channels: HashMap<String, Vec<ChannelCount>>,
     sample_rates: HashMap<String, Vec<u32>>,
 }
@@ -123,15 +123,6 @@ pub struct Widgets {
     input_channels_cbox: ComboBoxText,
 
     output_device_cbox: ComboBoxText,
-}
-
-/// Makes play button active or inactive relative to the file status.
-fn change_play_button_sensitivity(file_status: FileStatus, play_button: &Button) {
-    if file_status == FileStatus::Exists {
-        play_button.set_sensitive(true);
-    } else {
-        play_button.set_sensitive(false);
-    }
 }
 
 /// Populates Start and End time of current chunk if it exists.
@@ -224,8 +215,28 @@ impl Update for Win {
     fn update(&mut self, event: Msg) {
         let prg_progress_label = &self.widgets.chunk_progress_label;
         let text_viewer = &self.widgets.chunk_viewer;
-        let audio_progress_label = &self.widgets.audio_progress_label;
         let progress_bar = &self.widgets.progress_bar;
+
+        let playback_widgets = AudioPlaybackWidgets {
+            progress_bar,
+            progress_text: &self.widgets.audio_progress_label,
+        };
+
+        let text_widgets = TextNavigationWidgets {
+            previous_button: &self.widgets.previous_chunk_button,
+            next_button: &self.widgets.next_chunk_button,
+            goto_menu: &self.widgets.goto_menu_item,
+        };
+
+        let input_widgets = InputPreferenceWidgets {
+            input_device_cbox: &mut self.widgets.input_device_cbox,
+            sample_rate_cbox: &mut self.widgets.input_sample_rate_cbox,
+            channels_cbox: &mut self.widgets.input_channels_cbox,
+        };
+
+        let output_widgets = OutputPreferenceWidgets {
+            output_device_cbox: &self.widgets.output_device_cbox,
+        };
 
         let paragraph_ui = ChunkViewingUi {
             progress_label: prg_progress_label,
@@ -236,13 +247,15 @@ impl Update for Win {
             Msg::ProgressTick => match self.model.audio_status {
                 ProcessingStatus::Playing => {
                     self.model.ms_passed += 100;
-                    let current_time = to_hh_mm_ss_str(self.model.ms_passed);
-                    let total_time = to_hh_mm_ss_str(self.model.ms_total);
 
-                    let progress_text = format!("{}/{}", current_time, total_time);
-                    audio_progress_label.set_markup(progress_text.as_str());
+                    let playback_progress = AudioPlaybackProgress {
+                        ms_passed: self.model.ms_passed,
+                        ms_total: self.model.ms_total,
+                    };
 
-                    if current_time.eq(&total_time) {
+                    update_playback_widgets(playback_widgets, playback_progress);
+
+                    if self.model.ms_passed == self.model.ms_total {
                         self.update(Msg::Stop);
                         return;
                     }
@@ -252,20 +265,21 @@ impl Update for Win {
                 ProcessingStatus::Recording => {
                     self.model.ms_passed += 100;
                     self.model.ms_total = self.model.ms_passed;
-                    let progress_text = format!(
-                        "{}/{}",
-                        to_hh_mm_ss_str(self.model.ms_passed),
-                        to_hh_mm_ss_str(self.model.ms_passed)
-                    );
-                    audio_progress_label.set_markup(progress_text.as_str());
+
+                    let playback_progress = AudioPlaybackProgress {
+                        ms_passed: self.model.ms_passed,
+                        ms_total: self.model.ms_total,
+                    };
+
+                    update_playback_widgets(playback_widgets, playback_progress);
                 }
                 ProcessingStatus::Stopped => {
-                    let progress_text = format!(
-                        "{}/{}",
-                        to_hh_mm_ss_str(self.model.ms_passed),
-                        to_hh_mm_ss_str(self.model.ms_total)
-                    );
-                    audio_progress_label.set_markup(progress_text.as_str());
+                    let playback_progress = AudioPlaybackProgress {
+                        ms_passed: self.model.ms_passed,
+                        ms_total: self.model.ms_total,
+                    };
+
+                    update_playback_widgets(playback_widgets, playback_progress);
                 }
                 _ => {}
             },
@@ -279,12 +293,6 @@ impl Update for Win {
                 {
                     self.model.chunk_number += 1;
 
-                    let text_widgets = TextNavigationWidgets {
-                        previous_button: &self.widgets.previous_chunk_button,
-                        next_button: &self.widgets.next_chunk_button,
-                        goto_menu: &self.widgets.goto_menu_item,
-                    };
-
                     let text_progress = TextNavigationProgress {
                         current_index: self.model.chunk_number,
                         total: self.model.chunk_total,
@@ -295,30 +303,18 @@ impl Update for Win {
                     if let Ok(file_status) = self.model.audio_processor.next() {
                         change_play_button_sensitivity(file_status, &self.widgets.play_button);
 
-                        let duration_ms = match file_status {
+                        self.model.ms_passed = 0;
+                        self.model.ms_total = match file_status {
                             FileStatus::Exists => self.model.audio_processor.duration(),
                             FileStatus::New => 0,
                         };
 
-                        self.model.ms_total = duration_ms;
-                        let progress_text = format!(
-                            "{}/{}",
-                            to_hh_mm_ss_str(self.model.ms_passed),
-                            to_hh_mm_ss_str(self.model.ms_total)
-                        );
-                        audio_progress_label.set_markup(progress_text.as_str());
+                        let playback_progress = AudioPlaybackProgress {
+                            ms_passed: self.model.ms_passed,
+                            ms_total: self.model.ms_total,
+                        };
 
-                        self.model.ms_passed = 0;
-                        let secs_passed = (self.model.ms_passed / 1000) as f64;
-                        let secs_total = (self.model.ms_total / 1000) as f64;
-                        progress_bar.set_adjustment(&Adjustment::new(
-                            secs_passed,
-                            0.0,
-                            secs_total,
-                            1.0,
-                            1.0,
-                            1.0,
-                        ));
+                        update_playback_widgets(playback_widgets, playback_progress);
                     }
                 }
             }
@@ -336,12 +332,6 @@ impl Update for Win {
                 {
                     self.model.chunk_number -= 1;
 
-                    let text_widgets = TextNavigationWidgets {
-                        previous_button: &self.widgets.previous_chunk_button,
-                        next_button: &self.widgets.next_chunk_button,
-                        goto_menu: &self.widgets.goto_menu_item,
-                    };
-
                     let text_progress = TextNavigationProgress {
                         current_index: self.model.chunk_number,
                         total: self.model.chunk_total,
@@ -352,22 +342,18 @@ impl Update for Win {
                     if let Ok(file_status) = self.model.audio_processor.prev() {
                         change_play_button_sensitivity(file_status, &self.widgets.play_button);
 
+                        self.model.ms_passed = 0;
                         self.model.ms_total = match file_status {
                             FileStatus::Exists => self.model.audio_processor.duration(),
                             FileStatus::New => 0,
                         };
 
-                        self.model.ms_passed = 0;
-                        let secs_passed = (self.model.ms_passed / 1000) as f64;
-                        let secs_total = (self.model.ms_total / 1000) as f64;
-                        progress_bar.set_adjustment(&Adjustment::new(
-                            secs_passed,
-                            0.0,
-                            secs_total,
-                            1.0,
-                            1.0,
-                            1.0,
-                        ));
+                        let playback_progress = AudioPlaybackProgress {
+                            ms_passed: self.model.ms_passed,
+                            ms_total: self.model.ms_total,
+                        };
+
+                        update_playback_widgets(playback_widgets, playback_progress);
                     }
                 }
             }
@@ -406,12 +392,6 @@ impl Update for Win {
                     {
                         self.model.chunk_number = goto_paragraph_num;
 
-                        let text_widgets = TextNavigationWidgets {
-                            previous_button: &self.widgets.previous_chunk_button,
-                            next_button: &self.widgets.next_chunk_button,
-                            goto_menu: &self.widgets.goto_menu_item,
-                        };
-
                         let text_progress = TextNavigationProgress {
                             current_index: self.model.chunk_number,
                             total: self.model.chunk_total,
@@ -426,16 +406,18 @@ impl Update for Win {
                         {
                             change_play_button_sensitivity(file_status, &self.widgets.play_button);
 
+                            self.model.ms_passed = 0;
                             self.model.ms_total = match file_status {
                                 FileStatus::Exists => self.model.audio_processor.duration(),
                                 FileStatus::New => 0,
                             };
 
-                            self.model.ms_passed = 0;
-                            let secs_total = (self.model.ms_total / 1000) as f64;
-                            progress_bar.set_adjustment(&Adjustment::new(
-                                0.0, 0.0, secs_total, 1.0, 1.0, 1.0,
-                            ));
+                            let playback_progress = AudioPlaybackProgress {
+                                ms_passed: self.model.ms_passed,
+                                ms_total: self.model.ms_total,
+                            };
+
+                            update_playback_widgets(playback_widgets, playback_progress);
                         }
                     }
                 }
@@ -476,8 +458,8 @@ impl Update for Win {
 
                     populate_input_preference_fields(
                         default_input_device,
-                        &self.model,
-                        &mut self.widgets,
+                        self.model.input_devices_info.as_ref().unwrap(),
+                        &input_widgets,
                     );
                 }
 
@@ -495,9 +477,9 @@ impl Update for Win {
                 // Determine if a new Output or Input Device must be created.
 
                 // Capture current positions of input fields if cancelled
-                let current_input_device_pos = self.widgets.input_device_cbox.active();
-                let current_input_channels_pos = self.widgets.input_channels_cbox.active();
-                let current_input_sample_rate_pos = self.widgets.input_sample_rate_cbox.active();
+                let current_input_device_pos = input_widgets.input_device_cbox.active();
+                let current_input_channels_pos = input_widgets.channels_cbox.active();
+                let current_input_sample_rate_pos = input_widgets.sample_rate_cbox.active();
 
                 // Now the output fields
                 let current_output_device_pos = self.widgets.output_device_cbox.active();
@@ -517,16 +499,6 @@ impl Update for Win {
                         self.model.chunk_total as usize,
                         new_directory.to_str().unwrap().to_string(),
                     );
-
-                    let input_widgets = InputPreferenceWidgets {
-                        input_device_cbox: &self.widgets.input_device_cbox,
-                        sample_rate_cbox: &self.widgets.input_sample_rate_cbox,
-                        channels_cbox: &self.widgets.input_channels_cbox,
-                    };
-
-                    let output_widgets = OutputPreferenceWidgets {
-                        output_device_cbox: &self.widgets.output_device_cbox,
-                    };
 
                     let input_info = get_input_selection_from(input_widgets);
                     let output_info = get_output_selection_from(output_widgets);
@@ -586,6 +558,7 @@ impl Update for Win {
                 let project_path = Path::new(&self.model.project_directory).join(text_filename);
 
                 create_project_dir_from(&project_path);
+                self.model.current_filename = String::from(text_filename);
 
                 // Load the user's last position, since the project path existing must
                 // mean that a session file was made.
@@ -602,16 +575,6 @@ impl Update for Win {
                 // Keep the input and output selections in preferences if the user has
                 // already specified their devices.
                 if self.model.preferences_has_been_shown_once {
-                    let input_widgets = InputPreferenceWidgets {
-                        input_device_cbox: &self.widgets.input_device_cbox,
-                        sample_rate_cbox: &self.widgets.input_sample_rate_cbox,
-                        channels_cbox: &self.widgets.input_channels_cbox,
-                    };
-
-                    let output_widgets = OutputPreferenceWidgets {
-                        output_device_cbox: &self.widgets.output_device_cbox,
-                    };
-
                     let input_info = get_input_selection_from(input_widgets);
                     let output_info = get_output_selection_from(output_widgets);
 
@@ -626,12 +589,6 @@ impl Update for Win {
                     paragraph_ui,
                 )
                 .unwrap();
-
-                let text_widgets = TextNavigationWidgets {
-                    previous_button: &self.widgets.previous_chunk_button,
-                    next_button: &self.widgets.next_chunk_button,
-                    goto_menu: &self.widgets.goto_menu_item,
-                };
 
                 let text_progress = TextNavigationProgress {
                     current_index: self.model.chunk_number,
@@ -703,12 +660,12 @@ impl Update for Win {
                 }
 
                 self.model.ms_passed = self.widgets.progress_bar.value() as u32 * 1000;
-                let progress_text = format!(
-                    "{}/{}",
-                    to_hh_mm_ss_str(self.model.ms_passed),
-                    to_hh_mm_ss_str(self.model.ms_total)
-                );
-                audio_progress_label.set_markup(progress_text.as_str());
+                let playback_progress = AudioPlaybackProgress {
+                    ms_passed: self.model.ms_passed,
+                    ms_total: self.model.ms_total,
+                };
+
+                update_playback_widgets(playback_widgets, playback_progress);
             }
             Msg::Stop => {
                 if self.model.audio_status == ProcessingStatus::Recording {
@@ -723,12 +680,6 @@ impl Update for Win {
 
                 self.widgets.stop_button.set_sensitive(false);
 
-                let text_widgets = TextNavigationWidgets {
-                    previous_button: &self.widgets.previous_chunk_button,
-                    next_button: &self.widgets.next_chunk_button,
-                    goto_menu: &self.widgets.goto_menu_item,
-                };
-
                 let text_progress = TextNavigationProgress {
                     current_index: self.model.chunk_number,
                     total: self.model.chunk_total,
@@ -737,9 +688,12 @@ impl Update for Win {
                 toggle_text_navigation_widgets(text_widgets, text_progress);
 
                 self.model.ms_passed = 0;
+                let playback_progress = AudioPlaybackProgress {
+                    ms_passed: self.model.ms_passed,
+                    ms_total: self.model.ms_total,
+                };
 
-                let secs_total = (self.model.ms_total / 1000) as f64;
-                progress_bar.set_adjustment(&Adjustment::new(0.0, 0.0, secs_total, 1.0, 1.0, 1.0));
+                update_playback_widgets(playback_widgets, playback_progress);
             }
             Msg::Record => {
                 self.model.audio_status = self.model.audio_processor.record().unwrap();
