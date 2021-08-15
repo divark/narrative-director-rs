@@ -14,8 +14,8 @@ use cpal::traits::DeviceTrait;
 use cpal::ChannelCount;
 use gtk::prelude::*;
 use gtk::{
-    AboutDialog, Adjustment, Builder, Button, ComboBoxText, Dialog, DialogFlags, EventBox,
-    FileChooser, Inhibit, Label, MenuItem, ResponseType, Scrollbar, SpinButton, TextView, Window,
+    AboutDialog, Builder, Button, ComboBoxText, Dialog, DialogFlags, EventBox, FileChooser,
+    Inhibit, Label, MenuItem, ResponseType, Scrollbar, SpinButton, TextView, Window,
 };
 use relm::{connect, interval, Relm, Update, Widget};
 use relm_derive::Msg;
@@ -56,7 +56,7 @@ pub struct Model {
     ms_total: u32,
     audio_status: ProcessingStatus,
 
-    input_devices_info: Option<InputDevicesInfo>,
+    input_devices_info: InputDevicesInfo,
     preferences_has_been_shown_once: bool,
     current_filename: String,
     project_directory: String,
@@ -125,19 +125,6 @@ pub struct Widgets {
     output_device_cbox: ComboBoxText,
 }
 
-/// Populates Start and End time of current chunk if it exists.
-fn reset_progress_bar_info(file_status: FileStatus, model: &mut Model, widgets: &Widgets) {
-    change_play_button_sensitivity(file_status, &widgets.play_button);
-
-    model.ms_passed = 0;
-    model.ms_total = model.audio_processor.duration();
-
-    let secs_total = (model.ms_total / 1000) as f64;
-    widgets
-        .progress_bar
-        .set_adjustment(&Adjustment::new(0.0, 0.0, secs_total, 1.0, 1.0, 1.0));
-}
-
 /// Returns if the Project directory has been created.
 fn create_project_dir_from(project_path: &Path) -> bool {
     if project_path.is_dir() {
@@ -188,18 +175,40 @@ impl Update for Win {
     fn model(_: &Relm<Self>, _: ()) -> Model {
         let chunk_retriever = ParagraphRetriever::new();
         let project_directory = dirs::audio_dir().unwrap().to_str().unwrap().to_string();
+        let audio_processor = AudioIO::new(0, project_directory.clone());
+
+        // Save Sample Rates and Channels for each known Input Device
+        let mut input_channels: HashMap<String, Vec<ChannelCount>> = HashMap::new();
+        let mut input_sample_rates: HashMap<String, Vec<u32>> = HashMap::new();
+
+        let input_devices = audio_processor.get_input_devices();
+        for input_device in input_devices {
+            input_channels.insert(
+                input_device.name().unwrap(),
+                audio_processor.get_input_channels_for(&input_device),
+            );
+            input_sample_rates.insert(
+                input_device.name().unwrap(),
+                audio_processor.get_input_sample_rates_for(&input_device),
+            );
+        }
+
+        let input_devices_info = InputDevicesInfo {
+            channels: input_channels,
+            sample_rates: input_sample_rates,
+        };
 
         Model {
             chunk_retriever,
             chunk_number: 0,
             chunk_total: 0,
 
-            audio_processor: AudioIO::new(0, project_directory.clone()),
+            audio_processor,
             ms_passed: 0,
             ms_total: 0,
             audio_status: ProcessingStatus::Stopped,
 
-            input_devices_info: None,
+            input_devices_info,
             preferences_has_been_shown_once: false,
             current_filename: String::new(),
             project_directory,
@@ -425,49 +434,21 @@ impl Update for Win {
                 goto_dialog.close();
             }
             Msg::OpenPreferences => {
-                // Map all Channels and Sample Rates to their respective Input Device if not
-                // already done.
-                if self.model.input_devices_info.is_none() {
-                    // Save Sample Rates and Channels for each known Input Device
-                    let mut input_channels: HashMap<String, Vec<ChannelCount>> = HashMap::new();
-                    let mut input_sample_rates: HashMap<String, Vec<u32>> = HashMap::new();
-
-                    let input_devices = self.model.audio_processor.get_input_devices();
-                    for input_device in input_devices {
-                        input_channels.insert(
-                            input_device.name().unwrap(),
-                            self.model
-                                .audio_processor
-                                .get_input_channels_for(&input_device),
-                        );
-                        input_sample_rates.insert(
-                            input_device.name().unwrap(),
-                            self.model
-                                .audio_processor
-                                .get_input_sample_rates_for(&input_device),
-                        );
-                    }
-
-                    self.model.input_devices_info = Some(InputDevicesInfo {
-                        channels: input_channels,
-                        sample_rates: input_sample_rates,
-                    });
-
+                // Show the preferences dialog
+                if !self.model.preferences_has_been_shown_once {
                     // Populate UI from current input device (The default device)
                     let default_input_device = self.model.audio_processor.get_input_device();
 
                     populate_input_preference_fields(
                         default_input_device,
-                        self.model.input_devices_info.as_ref().unwrap(),
+                        &self.model.input_devices_info,
                         &input_widgets,
                     );
-                }
 
-                // Show the preferences dialog
-                if !self.model.preferences_has_been_shown_once {
                     self.widgets
                         .preferences_dialog
                         .add_buttons(&[("Ok", ResponseType::Ok), ("Cancel", ResponseType::Cancel)]);
+
                     self.model.preferences_has_been_shown_once = true;
                 }
                 self.widgets
@@ -511,7 +492,18 @@ impl Update for Win {
                         .audio_processor
                         .go_to(self.model.chunk_number as usize)
                         .unwrap();
-                    reset_progress_bar_info(file_status, &mut self.model, &self.widgets);
+
+                    change_play_button_sensitivity(file_status, &self.widgets.play_button);
+
+                    self.model.ms_passed = 0;
+                    self.model.ms_total = self.model.audio_processor.duration();
+
+                    let playback_progress = AudioPlaybackProgress {
+                        ms_passed: self.model.ms_passed,
+                        ms_total: self.model.ms_total,
+                    };
+
+                    update_playback_widgets(playback_widgets, playback_progress);
                 } else {
                     // Reset all fields back to original positions
                     self.widgets
@@ -582,6 +574,26 @@ impl Update for Win {
                     self.model.audio_processor.set_output_device(output_info);
                 }
 
+                self.widgets.record_button.set_sensitive(true);
+
+                let file_status = self
+                    .model
+                    .audio_processor
+                    .go_to(self.model.chunk_number as usize)
+                    .unwrap();
+
+                change_play_button_sensitivity(file_status, &self.widgets.play_button);
+
+                self.model.ms_passed = 0;
+                self.model.ms_total = self.model.audio_processor.duration();
+
+                let playback_progress = AudioPlaybackProgress {
+                    ms_passed: self.model.ms_passed,
+                    ms_total: self.model.ms_total,
+                };
+
+                update_playback_widgets(playback_widgets, playback_progress);
+
                 // Finally, make the right buttons active depending on what chunks are available.
                 show_chunk(
                     self.model.chunk_number,
@@ -596,14 +608,6 @@ impl Update for Win {
                 };
 
                 toggle_text_navigation_widgets(text_widgets, text_progress);
-                self.widgets.record_button.set_sensitive(true);
-
-                let file_status = self
-                    .model
-                    .audio_processor
-                    .go_to(self.model.chunk_number as usize)
-                    .unwrap();
-                reset_progress_bar_info(file_status, &mut self.model, &self.widgets);
             }
             Msg::Quit => {
                 if !self.model.current_filename.is_empty() {
