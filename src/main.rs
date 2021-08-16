@@ -436,24 +436,25 @@ impl Update for Win {
             Msg::OpenPreferences => {
                 // Show the preferences dialog
                 if !self.model.preferences_has_been_shown_once {
-                    // Populate UI from current input device (The default device)
-                    let default_input_device = self.model.audio_processor.get_input_device();
-
-                    populate_input_preference_fields(
-                        default_input_device,
-                        &self.model.input_devices_info,
-                        &input_widgets,
-                    );
-
                     self.widgets
                         .preferences_dialog
                         .add_buttons(&[("Ok", ResponseType::Ok), ("Cancel", ResponseType::Cancel)]);
 
+                    self.widgets
+                        .preferences_dialog
+                        .set_default_response(ResponseType::Ok);
+
                     self.model.preferences_has_been_shown_once = true;
                 }
-                self.widgets
-                    .preferences_dialog
-                    .set_default_response(ResponseType::Ok);
+
+                // Populate UI from current input device
+                let current_input_device = self.model.audio_processor.get_input_device();
+
+                populate_input_preference_fields(
+                    current_input_device,
+                    &self.model.input_devices_info,
+                    &input_widgets,
+                );
 
                 // Determine if a new Output or Input Device must be created.
 
@@ -613,7 +614,7 @@ impl Update for Win {
                 if !self.model.current_filename.is_empty() {
                     let filepath =
                         Path::new(&self.model.project_directory).join(&self.model.current_filename);
-                    assert!(filepath.is_dir());
+                    debug_assert!(filepath.is_dir());
 
                     let session_info: ChunksSessionInfo = ChunksSessionInfo {
                         current_paragraph_num: self.model.chunk_number,
@@ -769,11 +770,8 @@ impl Widget for Win {
         let preferences_dialog: Dialog = builder.object("preferences_dialog").unwrap();
         // General - Preferences
         let project_file_chooser: FileChooser = builder.object("project_file_chooser").unwrap();
-        let home_directory = dirs::audio_dir().unwrap();
-        let project_path = Path::new(home_directory.as_path());
-        if !project_path.is_dir() {
-            fs::create_dir(project_path).unwrap();
-        }
+        let audio_directory = dirs::audio_dir().unwrap();
+        let project_path = Path::new(audio_directory.as_path());
         project_file_chooser.set_current_folder(project_path);
         // Audio - Preferences
         let mut input_device_cbox: ComboBoxText = builder.object("input_device_cbox").unwrap();
