@@ -32,7 +32,7 @@ nothing.
 
 To adjust the size of the text, go to the Menu Bar, click View, then
 Zoom In or Zoom Out. To change the font of the text, see 
-[Changing Preferences](#Changing Preferences).
+[Changing Preferences](#changing-preferences).
 
 ### Recording a Paragraph Reading
 When opening Narrative Director for the first time, it uses the default input
@@ -41,7 +41,7 @@ device as deemed by the Operating System.
 In addition, Narrative Director places all recordings in a folder named after the
 chosen text file, located in the Music folder for your Operating System.
 
-To change either of these, see [Changing Preferences](#Changing Preferences).
+To change either of these, see [Changing Preferences](#changing-preferences).
 
 -----------
 
@@ -62,7 +62,7 @@ will be possible now.
 When opening Narrative Director for the first time, by default, it uses the
 default output device as deemed by the Operating System.
 
-If you wish to change this, see [Changing Preferences](#Changing Preferences).
+If you wish to change this, see [Changing Preferences](#changing-preferences).
 
 -----------
 
