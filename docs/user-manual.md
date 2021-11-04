@@ -28,6 +28,12 @@ program shows the current paragraph number out of the total found.
 In order to move to the next paragraph, click the Next button. At any point, 
 to move to the previous paragraph, click the Previous button.
 
+If you want to jump to a particular paragraph number, this can be achieved
+either by clicking the paragraph counter, or navigating to the Menu Bar and
+going to View, then selecting Go To. A prompt will appear asking for the
+paragraph number. When you are content with the number entered, click the
+OK button. This will now show the paragraph at the spot specified.
+
 To adjust the size of the text, go to the Menu Bar, click View, then
 Zoom In or Zoom Out. To change the font of the text, see 
 [Changing Preferences](#changing-preferences).
@@ -43,10 +49,10 @@ To change either of these, see [Changing Preferences](#changing-preferences).
 
 -----------
 
-To record a reading for the current paragraph in view, click the Record button.
-Take note of the progress label. The progress label represents the current
-position in time for the recording over the total time. This label starts
-updating the total time as you record. Note that you will not be able to 
+To record or re-record a reading for the current paragraph in view, click the 
+Record button. Take note of the progress label. The progress label represents
+the current position in time for the recording over the total time. This label
+starts updating the total time as you record. Note that you will not be able to 
 navigate to other paragraphs while you record.
 
 If you wish to pause the recording, press the Pause button. This causes the
