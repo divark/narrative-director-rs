@@ -1,9 +1,11 @@
 # Narrative Director User Manual
 
 ## Summary
-Narrative Director is an Audio/Video Recording Pacer application, with a focus 
-on error-free readings. This tool aspires to keep editing to a minimum, keeping 
-only recordings that are deemed satisfactory by the reader.
+Narrative Director is an alternative Audio/Video Recording application tailored
+for working on medium to large-sized projects. This tool aspires to keep editing
+to a minimum with the capability of playing, recording and re-recording readings
+in place at the paragraph level for some text piece, whether it's a script, or a
+novel.
 
 ## Getting Started
 Begin by acquiring a .txt file that you wish to read. If you want to have a
@@ -96,7 +98,7 @@ This is where you change the device used for playback.
 This is where you change the device used for recording. In addition, the device
 can be fine tuned with the following options:
 
-- Sample Rate: This captures the amount of information to capture. Making this
-value higher will increase the audio quality at the cost of higher file sizes.
+- Sample Rate: This captures the amount of information to record. Making this
+value higher will increase the audio quality at the cost of larger file sizes.
 - Channels: This represents the number of directional inputs to consider based
 on the capabilities of the device. For example, 2 represents a stereo recording.
