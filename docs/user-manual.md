@@ -50,13 +50,11 @@ To change either of these, see [Changing Preferences](#changing-preferences).
 -----------
 
 To record or re-record a reading for the current paragraph in view, click the 
-Record button. Take note of the progress label. The progress label represents
-the current position in time for the recording over the total time. This label
-starts updating the total time as you record. Note that you will not be able to 
-navigate to other paragraphs while you record.
+Record button. Take note of the playback time updating the total time. Note that you
+will not be able to navigate to other paragraphs while you record.
 
 If you wish to pause the recording, press the Pause button. This causes the
-progress label to stop counting the total recording time. To resume, click the
+playback time to stop counting the total recording time. To resume, click the
 Record button again.
 
 When you are done recording, press the Stop button. This makes the progress
@@ -72,14 +70,14 @@ If you wish to change this, see [Changing Preferences](#changing-preferences).
 -----------
 
 To hear an existing reading, navigate to a paragraph that has been recorded.
-Once you do so, the progress label updates the total time of the reading, and
+Once you do so, the playback time updates the total time of the reading, and
 the Play button activates. Dragging the progress bar changes the start time of 
 the reading. When satisfied, click the Play button, where you will hear the
-reading. Notice the progress label counting up the current time to the total
+reading. Notice the playback time counting up the current time to the total
 time of the recording.
 
 If you want to pause the playback at any time, press the Pause button. This
-causes the progress label to stop counting the current position in the recording.
+causes the playback time to stop counting the current position in the recording.
 To resume, click the Play button again.
 
 The recording stops playing once it reaches the end time, resetting the progress
