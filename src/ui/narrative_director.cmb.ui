@@ -1,0 +1,117 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Created with Cambalache 0.7.4 -->
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <menu id="menuModel">
+    <section>
+      <submenu>
+        <attribute name="label">File</attribute>
+        <item>
+          <attribute name="label">Open</attribute>
+          <attribute name="action">win.open</attribute>
+        </item>
+        <item>
+          <attribute name="label">Exit</attribute>
+          <attribute name="action">win.quit</attribute>
+        </item>
+      </submenu>
+      <submenu>
+        <attribute name="label">Edit</attribute>
+        <item>
+          <attribute name="label">Go To</attribute>
+          <attribute name="action">win.goto</attribute>
+        </item>
+        <item>
+          <attribute name="label">Preferences</attribute>
+          <attribute name="action">win.preferences</attribute>
+        </item>
+      </submenu>
+      <submenu>
+        <attribute name="label">Help</attribute>
+        <item>
+          <attribute name="label">About</attribute>
+          <attribute name="action">win.about</attribute>
+        </item>
+      </submenu>
+    </section>
+  </menu>
+  <object class="GtkWindow" id="window">
+    <property name="default-height">480</property>
+    <property name="default-width">640</property>
+    <property name="title">Narrative Director</property>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkPopoverMenuBar" id="popup_menu">
+            <property name="hexpand">True</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkLabel" id="chunk_position_lbl">
+            <property name="label">0/0</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkScrolledWindow">
+            <property name="hexpand">True</property>
+            <property name="vexpand">True</property>
+            <child>
+              <object class="GtkTextView" id="chunk_view_txtviewer">
+                <property name="cursor-visible">False</property>
+                <property name="editable">False</property>
+                <property name="hexpand">True</property>
+                <property name="vexpand">True</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkScrollbar" id="progress_bar"/>
+        </child>
+        <child>
+          <object class="GtkBox">
+            <property name="homogeneous">True</property>
+            <property name="hexpand">True</property>
+            <child>
+              <object class="GtkButton" id="prev_chunk_btn">
+                <property name="label">Previous</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel" id="audio_progress_lbl">
+                <property name="label">00:00:00/00:00:00</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="next_chunk_btn">
+                <property name="label">Next</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox">
+            <property name="homogeneous">True</property>
+            <property name="hexpand">True</property>
+            <child>
+              <object class="GtkButton" id="stop_btn">
+                <property name="label">Stop</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="record_btn">
+                <property name="label">Record</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="play/pause_btn">
+                <property name="label">Play</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>
