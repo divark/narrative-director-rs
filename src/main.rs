@@ -1,8 +1,6 @@
 use gtk::gio::MenuModel;
 use gtk::prelude::*;
-use gtk::{
-    Application, Window, Builder, PopoverMenuBar
-};
+use gtk::{Application, Builder, PopoverMenuBar, Window};
 
 pub fn build_ui(application: &Application) {
     let ui_src = include_str!("ui/narrative_director.cmb.ui");
@@ -15,7 +13,9 @@ pub fn build_ui(application: &Application) {
     window.set_application(Some(application));
 
     let menubar: PopoverMenuBar = builder.object("popup_menu").expect("Couldn't get menubar.");
-    let menumodel: MenuModel = builder.object("menuModel").expect("Couldn't get menu model.");
+    let menumodel: MenuModel = builder
+        .object("menuModel")
+        .expect("Couldn't get menu model.");
 
     menubar.set_menu_model(Some(&menumodel));
 
