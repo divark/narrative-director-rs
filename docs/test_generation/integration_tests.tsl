@@ -1,0 +1,636 @@
+
+Test Case 1  		<single>
+   File :  Empty
+
+
+Test Case 2  		<single>
+   File :  Some Sentences
+
+
+Test Case 3  		<single>
+   File :  Some words no endings
+
+
+Test Case 4  		<single>
+   File :  One Paragraph
+
+
+Test Case 5  		<single>
+   Input Devices :  Change Input Device
+
+
+Test Case 6  		<single>
+   Input Devices :  Change Input Sample Rate
+
+
+Test Case 7  		<single>
+   Input Devices :  Change Input Channels
+
+
+Test Case 8  		<single>
+   Input Devices :  Change All Input Options
+
+
+Test Case 9  		<single>
+   Output Devices :  Change Output Device
+
+
+Test Case 10 		<single>
+   Project Directory :  Change Project Directory
+
+
+Test Case 11 		<single>
+   Session :  Pre-existing Session
+
+
+Test Case 12 		<error>
+   Text :  Go To No Text
+
+
+Test Case 13 		<single>
+   Text :  Go To Exceeds Paragraphs
+
+
+Test Case 14 		<error>
+   Text :  Go To Negative
+
+
+Test Case 15 		<single>
+   Text :  Go To While Playing
+
+
+Test Case 16 		<single>
+   Text :  Go To While Recording
+
+
+Test Case 17 		<single>
+   Text :  Show Next Exceeds
+
+
+Test Case 18 		<error>
+   Text :  Show Next No Text
+
+
+Test Case 19 		<single>
+   Text :  Show Next While Playing
+
+
+Test Case 20 		<single>
+   Text :  Show Next While Recording
+
+
+Test Case 21 		<error>
+   Text :  Show Previous Negative
+
+
+Test Case 22 		<error>
+   Text :  Show Previous No Text
+
+
+Test Case 23 		<single>
+   Text :  Show Previous While Playing
+
+
+Test Case 24 		<single>
+   Text :  Show Previous While Recording
+
+
+Test Case 25 		<single>
+   Audio Playback :  Play Nothing
+
+
+Test Case 26 		<single>
+   Audio Playback :  Stop Nothing
+
+
+Test Case 27 		<single>
+   Progress Bar :  Move Progress Bar with Nothing
+
+
+Test Case 28 		(Key = 5.1.1.1.1.4.3.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Go To Paragraph Exists
+   Audio Playback    :  Play Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 29 		(Key = 5.1.1.1.1.4.3.4.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Go To Paragraph Exists
+   Audio Playback    :  Play Something
+   Progress Bar      :  Move Progress Bar while Playing
+
+
+Test Case 30 		(Key = 5.1.1.1.1.4.4.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Go To Paragraph Exists
+   Audio Playback    :  Pause Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 31 		(Key = 5.1.1.1.1.4.4.5.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Go To Paragraph Exists
+   Audio Playback    :  Pause Something
+   Progress Bar      :  Move Progress Bar While Paused
+
+
+Test Case 32 		(Key = 5.1.1.1.1.4.5.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Go To Paragraph Exists
+   Audio Playback    :  Stop Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 33 		(Key = 5.1.1.1.1.4.5.3.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Go To Paragraph Exists
+   Audio Playback    :  Stop Something
+   Progress Bar      :  Move Progress Bar with Something
+
+
+Test Case 34 		(Key = 5.1.1.1.1.4.6.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Go To Paragraph Exists
+   Audio Playback    :  Replay Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 35 		(Key = 5.1.1.1.1.4.6.4.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Go To Paragraph Exists
+   Audio Playback    :  Replay Something
+   Progress Bar      :  Move Progress Bar while Playing
+
+
+Test Case 36 		(Key = 5.1.1.1.1.4.7.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Go To Paragraph Exists
+   Audio Playback    :  Record Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 37 		(Key = 5.1.1.1.1.4.7.6.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Go To Paragraph Exists
+   Audio Playback    :  Record Something
+   Progress Bar      :  Move Progress Bar while Recording
+
+
+Test Case 38 		(Key = 5.1.1.1.1.4.8.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Go To Paragraph Exists
+   Audio Playback    :  Rerecord
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 39 		(Key = 5.1.1.1.1.4.8.6.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Go To Paragraph Exists
+   Audio Playback    :  Rerecord
+   Progress Bar      :  Move Progress Bar while Recording
+
+
+Test Case 40 		(Key = 5.1.1.1.1.9.3.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Next Paragraph Exists
+   Audio Playback    :  Play Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 41 		(Key = 5.1.1.1.1.9.3.4.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Next Paragraph Exists
+   Audio Playback    :  Play Something
+   Progress Bar      :  Move Progress Bar while Playing
+
+
+Test Case 42 		(Key = 5.1.1.1.1.9.4.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Next Paragraph Exists
+   Audio Playback    :  Pause Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 43 		(Key = 5.1.1.1.1.9.4.5.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Next Paragraph Exists
+   Audio Playback    :  Pause Something
+   Progress Bar      :  Move Progress Bar While Paused
+
+
+Test Case 44 		(Key = 5.1.1.1.1.9.5.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Next Paragraph Exists
+   Audio Playback    :  Stop Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 45 		(Key = 5.1.1.1.1.9.5.3.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Next Paragraph Exists
+   Audio Playback    :  Stop Something
+   Progress Bar      :  Move Progress Bar with Something
+
+
+Test Case 46 		(Key = 5.1.1.1.1.9.6.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Next Paragraph Exists
+   Audio Playback    :  Replay Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 47 		(Key = 5.1.1.1.1.9.6.4.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Next Paragraph Exists
+   Audio Playback    :  Replay Something
+   Progress Bar      :  Move Progress Bar while Playing
+
+
+Test Case 48 		(Key = 5.1.1.1.1.9.7.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Next Paragraph Exists
+   Audio Playback    :  Record Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 49 		(Key = 5.1.1.1.1.9.7.6.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Next Paragraph Exists
+   Audio Playback    :  Record Something
+   Progress Bar      :  Move Progress Bar while Recording
+
+
+Test Case 50 		(Key = 5.1.1.1.1.9.8.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Next Paragraph Exists
+   Audio Playback    :  Rerecord
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 51 		(Key = 5.1.1.1.1.9.8.6.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Next Paragraph Exists
+   Audio Playback    :  Rerecord
+   Progress Bar      :  Move Progress Bar while Recording
+
+
+Test Case 52 		(Key = 5.1.1.1.1.14.3.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Previous Paragraph Exists
+   Audio Playback    :  Play Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 53 		(Key = 5.1.1.1.1.14.3.4.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Previous Paragraph Exists
+   Audio Playback    :  Play Something
+   Progress Bar      :  Move Progress Bar while Playing
+
+
+Test Case 54 		(Key = 5.1.1.1.1.14.4.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Previous Paragraph Exists
+   Audio Playback    :  Pause Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 55 		(Key = 5.1.1.1.1.14.4.5.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Previous Paragraph Exists
+   Audio Playback    :  Pause Something
+   Progress Bar      :  Move Progress Bar While Paused
+
+
+Test Case 56 		(Key = 5.1.1.1.1.14.5.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Previous Paragraph Exists
+   Audio Playback    :  Stop Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 57 		(Key = 5.1.1.1.1.14.5.3.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Previous Paragraph Exists
+   Audio Playback    :  Stop Something
+   Progress Bar      :  Move Progress Bar with Something
+
+
+Test Case 58 		(Key = 5.1.1.1.1.14.6.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Previous Paragraph Exists
+   Audio Playback    :  Replay Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 59 		(Key = 5.1.1.1.1.14.6.4.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Previous Paragraph Exists
+   Audio Playback    :  Replay Something
+   Progress Bar      :  Move Progress Bar while Playing
+
+
+Test Case 60 		(Key = 5.1.1.1.1.14.7.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Previous Paragraph Exists
+   Audio Playback    :  Record Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 61 		(Key = 5.1.1.1.1.14.7.6.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Previous Paragraph Exists
+   Audio Playback    :  Record Something
+   Progress Bar      :  Move Progress Bar while Recording
+
+
+Test Case 62 		(Key = 5.1.1.1.1.14.8.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Previous Paragraph Exists
+   Audio Playback    :  Rerecord
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 63 		(Key = 5.1.1.1.1.14.8.6.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Previous Paragraph Exists
+   Audio Playback    :  Rerecord
+   Progress Bar      :  Move Progress Bar while Recording
+
+
+Test Case 64 		(Key = 5.1.1.1.1.17.3.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Default
+   Audio Playback    :  Play Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 65 		(Key = 5.1.1.1.1.17.3.4.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Default
+   Audio Playback    :  Play Something
+   Progress Bar      :  Move Progress Bar while Playing
+
+
+Test Case 66 		(Key = 5.1.1.1.1.17.4.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Default
+   Audio Playback    :  Pause Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 67 		(Key = 5.1.1.1.1.17.4.5.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Default
+   Audio Playback    :  Pause Something
+   Progress Bar      :  Move Progress Bar While Paused
+
+
+Test Case 68 		(Key = 5.1.1.1.1.17.5.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Default
+   Audio Playback    :  Stop Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 69 		(Key = 5.1.1.1.1.17.5.3.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Default
+   Audio Playback    :  Stop Something
+   Progress Bar      :  Move Progress Bar with Something
+
+
+Test Case 70 		(Key = 5.1.1.1.1.17.6.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Default
+   Audio Playback    :  Replay Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 71 		(Key = 5.1.1.1.1.17.6.4.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Default
+   Audio Playback    :  Replay Something
+   Progress Bar      :  Move Progress Bar while Playing
+
+
+Test Case 72 		(Key = 5.1.1.1.1.17.7.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Default
+   Audio Playback    :  Record Something
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 73 		(Key = 5.1.1.1.1.17.7.6.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Default
+   Audio Playback    :  Record Something
+   Progress Bar      :  Move Progress Bar while Recording
+
+
+Test Case 74 		(Key = 5.1.1.1.1.17.8.1.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Default
+   Audio Playback    :  Rerecord
+   Progress Bar      :  Don't Move Progress Bar
+
+
+Test Case 75 		(Key = 5.1.1.1.1.17.8.6.)
+   File              :  Many Paragraphs
+   Input Devices     :  Use Default Input
+   Output Devices    :  Use Default Output
+   Project Directory :  Use Default Project Directory
+   Session           :  New Session
+   Text              :  Show Default
+   Audio Playback    :  Rerecord
+   Progress Bar      :  Move Progress Bar while Recording
+

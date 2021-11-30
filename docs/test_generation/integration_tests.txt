@@ -1,0 +1,67 @@
+File:
+	Empty.								[single][property emptyfile]
+	Some Sentences.						[single]
+	Some words no endings.				[single]
+	One Paragraph.						[single]
+	Many Paragraphs.
+
+Input Devices:
+	Use Default Input.
+	Change Input Device.				[single]
+	Change Input Sample Rate.			[single]
+	Change Input Channels.				[single]
+	Change All Input Options.			[single]
+
+Output Devices:
+	Use Default Output.
+	Change Output Device.				[single]
+
+Project Directory:
+	Use Default Project Directory.
+	Change Project Directory.			[single]
+
+Session:
+	New Session.						[if !emptyfile]
+	Pre-existing Session.				[single][if !emptyfile]
+
+Text:
+	Go To No Text.						[error]
+	Go To Exceeds Paragraphs.			[single][if !emptyfile]
+	Go To Negative.						[error]
+	Go To Paragraph Exists.				[if !emptyfile]
+	Go To While Playing.				[single]
+	Go To While Recording.				[single]
+
+	Show Next Exceeds.					[single][if !emptyfile]
+	Show Next No Text.					[error]
+	Show Next Paragraph Exists.			[if !emptyfile]
+	Show Next While Playing.			[single]
+	Show Next While Recording.			[single]
+
+	Show Previous Negative.				[error]
+	Show Previous No Text.				[error]
+	Show Previous Paragraph Exists.		[if !emptyfile]
+	Show Previous While Playing.		[single]
+	Show Previous While Recording.		[single]
+
+	Show Default.
+
+Audio Playback:
+	Play Nothing.						[single][if !emptyfile]
+	Stop Nothing.						[single][if !emptyfile]
+
+	Play Something.						[if !emptyfile][property playing]
+	Pause Something.					[if !emptyfile][property paused]
+	Stop Something.						[if !emptyfile][property stopped]
+	Replay Something.					[if !emptyfile][property replaying]
+	Record Something.					[if !emptyfile][property recording]
+	Rerecord.							[if !emptyfile][property rerecording]
+
+Progress Bar:
+	Don't Move Progress Bar.
+	Move Progress Bar with Nothing.		[single][if !emptyfile]
+	Move Progress Bar with Something.	[if stopped]
+	Move Progress Bar while Playing.	[if playing || replaying]
+	Move Progress Bar While Paused.		[if paused]
+	Move Progress Bar while Recording.	[if recording || rerecording]
+
