@@ -1,1 +1,5 @@
 /target
+
+# IDEs and Code Editors
+.idea/*
+.vscode/*

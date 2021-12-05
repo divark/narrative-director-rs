@@ -19,3 +19,5 @@ serde_json = "1.0"
 
 [dev-dependencies]
 tempfile = "3"
+gtk-test = "0.7.0"
+relm-test = "^0.22.0"
