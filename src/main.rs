@@ -126,12 +126,14 @@ impl Update for Win {
                         session.set_paragraph_num(self.widgets.paragraph_viewer.paragraph_num());
                         session.save();
                     }
-                    
+
                     let session = Session::load(file_location.clone())
                         .unwrap_or_else(|| Session::new(file_location.clone()));
 
                     self.widgets.paragraph_viewer.load_paragraphs(file_location);
-                    self.widgets.paragraph_viewer.show_paragraph_at(session.paragraph_num());
+                    self.widgets
+                        .paragraph_viewer
+                        .show_paragraph_at(session.paragraph_num());
 
                     self.widgets.goto_menu_item.set_sensitive(true);
 
@@ -147,7 +149,7 @@ impl Update for Win {
                 }
 
                 gtk::main_quit()
-            },
+            }
         }
     }
 }

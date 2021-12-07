@@ -24,7 +24,9 @@ impl AudioInput {
             .expect("Could not retrieve the properties from the default input device.");
 
         AudioInput {
-            input_device_name: input_device.name().unwrap_or_else(|_| "Default".to_string()),
+            input_device_name: input_device
+                .name()
+                .unwrap_or_else(|_| "Default".to_string()),
             sample_rate: input_config.sample_rate().0,
             channels: input_config.channels(),
         }
@@ -127,7 +129,9 @@ impl Session {
 
     pub fn save(&self) {
         let session_path = self.get_session_path();
-        let project_directory = session_path.parent().expect("Could not retrieve parent directory from session file.");
+        let project_directory = session_path
+            .parent()
+            .expect("Could not retrieve parent directory from session file.");
         if !project_directory.is_dir() {
             DirBuilder::new()
                 .recursive(true)
@@ -176,7 +180,7 @@ mod linux_tests {
         text_path.push("src");
         text_path.push("tests");
         text_path.push("test.txt");
-        
+
         assert!(text_path.is_file());
 
         text_path
