@@ -5,7 +5,7 @@ use std::fs::{write, DirBuilder, File};
 use std::io::Read;
 use std::path::PathBuf;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct AudioInput {
     input_device_name: String,
     sample_rate: u32,
@@ -24,7 +24,7 @@ impl AudioInput {
             .expect("Could not retrieve the properties from the default input device.");
 
         AudioInput {
-            input_device_name: input_device.name().unwrap_or("Default".to_string()),
+            input_device_name: input_device.name().unwrap_or_else(|_| "Default".to_string()),
             sample_rate: input_config.sample_rate().0,
             channels: input_config.channels(),
         }
@@ -43,12 +43,12 @@ impl AudioInput {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Font {
     size: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Session {
     paragraph_num: usize,
     project_directory: PathBuf,
@@ -127,12 +127,12 @@ impl Session {
 
     pub fn save(&self) {
         let session_path = self.get_session_path();
-
-        if !session_path.is_dir() {
+        let project_directory = session_path.parent().expect("Could not retrieve parent directory from session file.");
+        if !project_directory.is_dir() {
             DirBuilder::new()
                 .recursive(true)
-                .create(session_path.clone())
-                .expect("Could not create directory for project state.");
+                .create(project_directory)
+                .expect("Could not create directory for recordings.");
         }
 
         write(
@@ -144,7 +144,7 @@ impl Session {
 
     pub fn load(text_file_loc: PathBuf) -> Option<Session> {
         let session_location = get_session_path_from_textfile(text_file_loc);
-        if !session_location.is_dir() {
+        if !session_location.is_file() {
             return None;
         }
 
@@ -156,6 +156,95 @@ impl Session {
 
         Some(serde_json::from_str(&file_contents).expect("Unable to parse Session from JSON."))
     }
+
+    pub fn set_paragraph_num(&mut self, paragraph_num: usize) {
+        self.paragraph_num = paragraph_num;
+    }
+
+    pub fn paragraph_num(&self) -> usize {
+        self.paragraph_num
+    }
 }
 
+#[cfg(all(target_os = "linux", test))]
+mod linux_tests {
+    use super::*;
+    use std::fs;
+
+    fn get_text_path() -> PathBuf {
+        let mut text_path = PathBuf::new();
+        text_path.push("src");
+        text_path.push("tests");
+        text_path.push("test.txt");
+        
+        assert!(text_path.is_file());
+
+        text_path
+    }
+
+    fn get_test_session_path() -> PathBuf {
+        let mut test_path = PathBuf::new();
+        test_path.push(dirs::home_dir().expect("Could not find home directory."));
+        test_path.push(".local/share/narrative_director/projects/test/session.json");
+
+        test_path
+    }
+
+    #[test]
+    fn test_session_path_textfile() {
+        let text_path = get_text_path();
+        let expected_path = get_test_session_path();
+        let actual_path = get_session_path_from_textfile(text_path);
+
+        assert_eq!(actual_path, expected_path.to_path_buf());
+    }
+
+    #[test]
+    fn test_session_get_path() {
+        let text_path = get_text_path();
+        let expected_path = get_test_session_path();
+        let actual_path = Session::new(text_path).get_session_path();
+
+        assert!(!actual_path.is_file());
+
+        assert_eq!(actual_path, expected_path.to_path_buf());
+    }
+
+    #[test]
+    fn test_session_save() {
+        let text_path = get_text_path();
+
+        let test_session_path = get_test_session_path();
+        assert!(!test_session_path.is_file());
+
+        let new_session = Session::new(text_path);
+        new_session.save();
+
+        assert!(test_session_path.is_file());
+
+        fs::remove_file(test_session_path).expect("Could not remove session file.");
+    }
+
+    #[test]
+    fn test_session_load() {
+        let text_path = get_text_path();
+
+        let test_session_path = get_test_session_path();
+        assert!(!test_session_path.is_file());
+
+        let new_session = Session::new(text_path.clone());
+        new_session.save();
+
+        assert!(test_session_path.is_file());
+
+        let loaded_session = Session::load(text_path);
+        assert!(loaded_session.is_some());
+
+        if let Some(session) = loaded_session {
+            assert_eq!(session, new_session);
+        }
+
+        fs::remove_file(test_session_path).expect("Could not remove session file.");
+    }
+}
 // TODO: Write tests before integrating changes into main.

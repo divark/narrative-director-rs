@@ -13,7 +13,8 @@ use std::path::PathBuf;
 
 mod media;
 
-mod session;
+mod sessions;
+use sessions::session::Session;
 
 mod text;
 use text::viewer::{ParagraphViewer, ViewerWidgets};
@@ -21,7 +22,9 @@ use text::viewer::{ParagraphViewer, ViewerWidgets};
 mod ui;
 use ui::common::*;
 
-pub struct Model {}
+pub struct Model {
+    current_session: Option<Session>,
+}
 
 /// Represents User Events that could take place
 /// in the GUI.
@@ -86,7 +89,9 @@ impl Update for Win {
     type Msg = Msg;
 
     fn model(_: &Relm<Self>, _: ()) -> Model {
-        Model {}
+        Model {
+            current_session: None,
+        }
     }
 
     // fn subscriptions(&mut self, relm: &Relm<Self>) {
@@ -117,15 +122,32 @@ impl Update for Win {
             Msg::LoadFile => {
                 let text_file_location = open(&self.widgets.window);
                 if let Some(file_location) = text_file_location {
+                    if let Some(session) = &mut self.model.current_session {
+                        session.set_paragraph_num(self.widgets.paragraph_viewer.paragraph_num());
+                        session.save();
+                    }
+                    
+                    let session = Session::load(file_location.clone())
+                        .unwrap_or_else(|| Session::new(file_location.clone()));
+
                     self.widgets.paragraph_viewer.load_paragraphs(file_location);
-                    self.widgets.paragraph_viewer.show_paragraph_at(0);
+                    self.widgets.paragraph_viewer.show_paragraph_at(session.paragraph_num());
 
                     self.widgets.goto_menu_item.set_sensitive(true);
+
+                    self.model.current_session = Some(session);
                 }
             }
             Msg::OpenPreferences => todo!(),
             Msg::About => about(&self.widgets.window),
-            Msg::Quit => gtk::main_quit(),
+            Msg::Quit => {
+                if let Some(session) = &mut self.model.current_session {
+                    session.set_paragraph_num(self.widgets.paragraph_viewer.paragraph_num());
+                    session.save();
+                }
+
+                gtk::main_quit()
+            },
         }
     }
 }

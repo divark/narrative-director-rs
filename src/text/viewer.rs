@@ -176,4 +176,8 @@ impl ParagraphViewer {
     pub fn num_paragraphs(&self) -> usize {
         self.paragraphs.len()
     }
+
+    pub fn paragraph_num(&self) -> usize {
+        self.paragraph_num
+    }
 }
