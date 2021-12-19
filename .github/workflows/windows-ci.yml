@@ -1,7 +1,13 @@
 # Used the following as reference:
 # https://github.com/gtk-rs/gtk-rs-core/blob/master/.github/workflows/windows.yml
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 name: Windows CI
 
@@ -101,6 +107,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
+          args: -- --test-threads=1
 
       - name: Clippy
         uses: actions-rs/clippy-check@v1

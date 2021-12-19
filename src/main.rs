@@ -7,11 +7,12 @@
 
 use gtk::prelude::*;
 use gtk::{Builder, Button, Inhibit, Label, MenuItem, Scrollbar, TextView, Window};
-use relm::{connect, Relm, Update, Widget, WidgetTest};
+use relm::{connect, Relm, Update, Widget};
 use relm_derive::Msg;
 use std::path::PathBuf;
 
 mod media;
+use media::io::*;
 
 mod sessions;
 use sessions::session::Session;
@@ -49,16 +50,8 @@ enum Msg {
 ///
 /// Widgets serve as both a means of viewing, like Labels and Viewers,
 /// as well as hooks that spawn User Events, such as Buttons.
-#[derive(Clone)]
 pub struct Widgets {
     window: Window,
-
-    // Audio-related Widgets
-    audio_progress_label: Label,
-    progress_bar: Scrollbar,
-    stop_button: Button,
-    record_button: Button,
-    play_button: Button,
 
     // Menu Widgets
     open_menu_item: MenuItem,
@@ -69,6 +62,7 @@ pub struct Widgets {
 
     // Custom Widgets
     paragraph_viewer: ParagraphViewer,
+    media_controller: Media,
 }
 
 /// Abstracts the whole application, merging
@@ -77,6 +71,20 @@ pub struct Widgets {
 struct Win {
     model: Model,
     widgets: Widgets,
+}
+
+fn load_audio_file(model: &Model, widgets: &mut Widgets) {
+    let current_session = model
+        .current_session
+        .as_ref()
+        .expect("A session must exist if Next messages can be processed.");
+
+    let audio_file_location = current_session.project_directory().join(format!(
+        "part{}.wav",
+        widgets.paragraph_viewer.paragraph_num()
+    ));
+
+    widgets.media_controller.load(audio_file_location);
 }
 
 /// Implements the Event Handler of all User Actions for
@@ -94,18 +102,32 @@ impl Update for Win {
         }
     }
 
-    // fn subscriptions(&mut self, relm: &Relm<Self>) {
-    //     interval(relm.stream(), 100, || ProgressTick);
-    // }
-
     // This is where all User Events are parsed, influencing how
     // the Model and View changes.
     fn update(&mut self, event: Msg) {
         match event {
-            Msg::Next => self.widgets.paragraph_viewer.show_next_paragraph(),
-            Msg::Previous => self.widgets.paragraph_viewer.show_previous_paragraph(),
-            Msg::Play => todo!(),
-            Msg::Stop => todo!(),
+            Msg::Next => {
+                self.widgets.paragraph_viewer.show_next_paragraph();
+
+                load_audio_file(&self.model, &mut self.widgets);
+            }
+            Msg::Previous => {
+                self.widgets.paragraph_viewer.show_previous_paragraph();
+
+                load_audio_file(&self.model, &mut self.widgets);
+            }
+            Msg::Play => {
+                let output_device = self
+                    .model
+                    .current_session
+                    .as_ref()
+                    .expect("Session should exist on playback.")
+                    .audio_output()
+                    .to_device();
+
+                self.widgets.media_controller.play(output_device);
+            }
+            Msg::Stop => self.widgets.media_controller.stop(),
             Msg::Record => todo!(),
             Msg::AudioSkip => todo!(),
             Msg::GoTo => {
@@ -113,10 +135,13 @@ impl Update for Win {
                     &self.widgets.window,
                     self.widgets.paragraph_viewer.num_paragraphs(),
                 );
+
                 if let Some(paragraph_num) = paragraph_num_choice {
                     self.widgets
                         .paragraph_viewer
                         .show_paragraph_at(paragraph_num);
+
+                    load_audio_file(&self.model, &mut self.widgets);
                 }
             }
             Msg::LoadFile => {
@@ -138,6 +163,8 @@ impl Update for Win {
                     self.widgets.goto_menu_item.set_sensitive(true);
 
                     self.model.current_session = Some(session);
+
+                    load_audio_file(&self.model, &mut self.widgets);
                 }
             }
             Msg::OpenPreferences => todo!(),
@@ -231,6 +258,8 @@ impl Widget for Win {
         );
 
         // Custom Widgets
+
+        // Paragraph Viewer setup
         let viewer_widgets = ViewerWidgets {
             paragraph_view,
             next_button,
@@ -239,17 +268,22 @@ impl Widget for Win {
         };
 
         let paragraph_viewer = ParagraphViewer::new(viewer_widgets);
+
+        // Media Controller setup
+        let media_widgets = MediaWidgets {
+            play_button,
+            stop_button,
+            record_button,
+            progress_bar,
+            time_progress_label: audio_progress_label,
+        };
+
+        let media_controller = Media::new(media_widgets);
+
         Win {
             model,
             widgets: Widgets {
                 window,
-
-                stop_button,
-                record_button,
-                play_button,
-
-                audio_progress_label,
-                progress_bar,
 
                 open_menu_item,
                 goto_menu_item,
@@ -258,20 +292,9 @@ impl Widget for Win {
                 quit_menu_item,
 
                 paragraph_viewer,
+                media_controller,
             },
         }
-    }
-}
-
-impl WidgetTest for Win {
-    type Streams = ();
-
-    fn get_streams(&self) -> Self::Streams {}
-
-    type Widgets = Widgets;
-
-    fn get_widgets(&self) -> Self::Widgets {
-        self.widgets.clone()
     }
 }
 

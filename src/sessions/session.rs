@@ -1,5 +1,5 @@
-use cpal::default_host;
 use cpal::traits::{DeviceTrait, HostTrait};
+use cpal::{default_host, Device};
 use serde::{Deserialize, Serialize};
 use std::fs::{write, DirBuilder, File};
 use std::io::Read;
@@ -46,6 +46,47 @@ impl AudioInput {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub struct AudioOutput {
+    output_device_name: String,
+}
+
+impl AudioOutput {
+    pub fn new() -> AudioOutput {
+        let host = default_host();
+        let output_device = host
+            .default_output_device()
+            .expect("Could not retrieve a default output device.");
+
+        AudioOutput {
+            output_device_name: output_device
+                .name()
+                .unwrap_or_else(|_| "Default".to_string()),
+        }
+    }
+
+    pub fn set_device_name(&mut self, name: String) {
+        self.output_device_name = name;
+    }
+
+    pub fn to_device(&self) -> Device {
+        let host = default_host();
+        let output_device = host
+            .output_devices()
+            .expect("No audio devices found for output.")
+            .find(|device| {
+                if let Ok(named_device) = device.name() {
+                    return named_device == self.output_device_name;
+                } else {
+                    return false;
+                }
+            })
+            .expect("Could not find output device.");
+
+        output_device
+    }
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Font {
     size: u32,
 }
@@ -57,6 +98,7 @@ pub struct Session {
     font: Font,
 
     audio_input: AudioInput,
+    audio_output: AudioOutput,
 }
 
 fn get_projects_path() -> PathBuf {
@@ -108,6 +150,7 @@ impl Session {
             font: Font { size: 12 },
 
             audio_input: AudioInput::new(),
+            audio_output: AudioOutput::new(),
         }
     }
 
@@ -167,6 +210,14 @@ impl Session {
 
     pub fn paragraph_num(&self) -> usize {
         self.paragraph_num
+    }
+
+    pub fn project_directory(&self) -> PathBuf {
+        self.project_directory.clone()
+    }
+
+    pub fn audio_output(&self) -> &AudioOutput {
+        &self.audio_output
     }
 }
 
