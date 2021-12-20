@@ -201,7 +201,10 @@ impl Session {
             .read_to_string(&mut file_contents)
             .expect("Unable to read contents from session file.");
 
-        Some(serde_json::from_str(&file_contents).expect("Unable to parse Session from JSON."))
+        match serde_json::from_str(&file_contents) {
+            Ok(session) => Some(session),
+            Err(_) => None,
+        }
     }
 
     pub fn set_paragraph_num(&mut self, paragraph_num: usize) {

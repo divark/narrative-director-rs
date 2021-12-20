@@ -5,7 +5,6 @@ use std::path::PathBuf;
 use gtk::prelude::*;
 use gtk::{Button, Label, TextView};
 
-#[derive(Clone)]
 struct Counter {
     progress_label: Label,
 
@@ -56,7 +55,6 @@ pub struct ViewerWidgets {
     pub progress_counter: Label,
 }
 
-#[derive(Clone)]
 pub struct ParagraphViewer {
     paragraphs: Vec<String>,
     paragraph_num: usize,

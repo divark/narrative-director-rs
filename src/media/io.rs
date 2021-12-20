@@ -147,6 +147,7 @@ impl Media {
             .play_button
             .label()
             .expect("Could not read text from Play Button.");
+
         if play_button_label == "Pause" {
             let source = self.playback_updater.take().unwrap();
             source_remove(source);
@@ -203,6 +204,7 @@ impl Media {
 
                 playback_widgets_clone.set_current(0);
                 playback_widgets_clone.update();
+                glib::Continue(false);
             }
 
             glib::Continue(true)

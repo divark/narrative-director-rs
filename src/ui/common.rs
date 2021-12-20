@@ -5,6 +5,8 @@ use gtk::{
     AboutDialogBuilder, Dialog, DialogFlags, FileFilter, License, ResponseType, SpinButton, Window,
 };
 
+use gtk::gdk_pixbuf::Pixbuf;
+
 /// Returns a File chosen by the user in a Dialog, or None if nothing
 /// was chosen.
 ///
@@ -84,12 +86,16 @@ pub fn go_to(parent_window: &Window, num_paragraphs: usize) -> Option<usize> {
 /// Precondition: parent_window is a Window reference.
 /// Postcondition: An About Dialog is shown until it is closed.
 pub fn about(parent_window: &Window) {
+    let logo: Pixbuf =
+        Pixbuf::from_file("resources/images/icon.png").expect("Could not find icon file.");
+
     let about_dialog = AboutDialogBuilder::new()
 		.program_name("Narrative Director")
 		.comments("Narrative Director is an alternative Audio/Video Recording application tailored for working on medium to large-sized projects. This tool aspires to keep editing to a minimum with the capability of playing, recording and re-recording readings in place at the paragraph level for some text piece, whether it's a script, or a novel.")
 		.authors(vec!["Tyler Schmidt <tmschmid@protonmail.com>".to_string()])
 		.artists(vec!["ColorfulSkyWisps https://linktr.ee/ColorfulSkyWisps".to_string()])
 		.license_type(License::Gpl30)
+        .logo(&logo)
 		.parent(parent_window)
 		.build();
 
