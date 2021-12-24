@@ -1,5 +1,5 @@
 use cpal::traits::{DeviceTrait, HostTrait};
-use cpal::{default_host, Device};
+use cpal::{default_host, Device, SampleRate, SupportedStreamConfig};
 use serde::{Deserialize, Serialize};
 use std::fs::{write, DirBuilder, File};
 use std::io::Read;
@@ -42,6 +42,34 @@ impl AudioInput {
 
     pub fn set_channels(&mut self, channels: u16) {
         self.channels = channels;
+    }
+
+    pub fn to_device(&self) -> Device {
+        let host = default_host();
+        let input_device = host
+            .input_devices()
+            .expect("No audio devices found for output.")
+            .find(|device| {
+                if let Ok(named_device) = device.name() {
+                    return named_device == self.input_device_name;
+                } else {
+                    return false;
+                }
+            })
+            .expect("Could not find output device.");
+
+        input_device
+    }
+
+    pub fn config(&self) -> SupportedStreamConfig {
+        let input_device = self.to_device();
+
+        input_device
+            .supported_input_configs()
+            .unwrap()
+            .find(|config| config.channels() == self.channels)
+            .expect("Could not find a device config with given sample rate and channels.")
+            .with_sample_rate(SampleRate(self.sample_rate))
     }
 }
 
@@ -222,87 +250,10 @@ impl Session {
     pub fn audio_output(&self) -> &AudioOutput {
         &self.audio_output
     }
-}
 
-#[cfg(all(target_os = "linux", test))]
-mod linux_tests {
-    use super::*;
-    use std::fs;
-
-    fn get_text_path() -> PathBuf {
-        let mut text_path = PathBuf::new();
-        text_path.push("src");
-        text_path.push("tests");
-        text_path.push("test.txt");
-
-        assert!(text_path.is_file());
-
-        text_path
-    }
-
-    fn get_test_session_path() -> PathBuf {
-        let mut test_path = PathBuf::new();
-        test_path.push(dirs::home_dir().expect("Could not find home directory."));
-        test_path.push(".local/share/narrative_director/projects/test/session.json");
-
-        test_path
-    }
-
-    #[test]
-    fn test_session_path_textfile() {
-        let text_path = get_text_path();
-        let expected_path = get_test_session_path();
-        let actual_path = get_session_path_from_textfile(text_path);
-
-        assert_eq!(actual_path, expected_path.to_path_buf());
-    }
-
-    #[test]
-    fn test_session_get_path() {
-        let text_path = get_text_path();
-        let expected_path = get_test_session_path();
-        let actual_path = Session::new(text_path).get_session_path();
-
-        assert!(!actual_path.is_file());
-
-        assert_eq!(actual_path, expected_path.to_path_buf());
-    }
-
-    #[test]
-    fn test_session_save() {
-        let text_path = get_text_path();
-
-        let test_session_path = get_test_session_path();
-        assert!(!test_session_path.is_file());
-
-        let new_session = Session::new(text_path);
-        new_session.save();
-
-        assert!(test_session_path.is_file());
-
-        fs::remove_file(test_session_path).expect("Could not remove session file.");
-    }
-
-    #[test]
-    fn test_session_load() {
-        let text_path = get_text_path();
-
-        let test_session_path = get_test_session_path();
-        assert!(!test_session_path.is_file());
-
-        let new_session = Session::new(text_path.clone());
-        new_session.save();
-
-        assert!(test_session_path.is_file());
-
-        let loaded_session = Session::load(text_path);
-        assert!(loaded_session.is_some());
-
-        if let Some(session) = loaded_session {
-            assert_eq!(session, new_session);
-        }
-
-        fs::remove_file(test_session_path).expect("Could not remove session file.");
+    pub fn audio_input(&self) -> &AudioInput {
+        &self.audio_input
     }
 }
+
 // TODO: Write tests before integrating changes into main.

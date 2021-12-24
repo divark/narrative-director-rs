@@ -36,7 +36,7 @@ enum Msg {
     Play,
     Stop,
     Record,
-    AudioSkip,
+    AudioSkip(usize),
 
     GoTo,
     LoadFile,
@@ -128,8 +128,27 @@ impl Update for Win {
                 self.widgets.media_controller.play(output_device);
             }
             Msg::Stop => self.widgets.media_controller.stop(),
-            Msg::Record => todo!(),
-            Msg::AudioSkip => todo!(),
+            Msg::Record => self.widgets.media_controller.record(
+                &self
+                    .model
+                    .current_session
+                    .as_ref()
+                    .expect("Session should exist on Recording.")
+                    .audio_input(),
+            ),
+            Msg::AudioSkip(pos_secs) => {
+                let output_device = self
+                    .model
+                    .current_session
+                    .as_ref()
+                    .expect("Session should exist on playback.")
+                    .audio_output()
+                    .to_device();
+
+                self.widgets
+                    .media_controller
+                    .play_at(output_device, pos_secs);
+            }
             Msg::GoTo => {
                 let paragraph_num_choice = go_to(
                     &self.widgets.window,
@@ -231,7 +250,14 @@ impl Widget for Win {
             connect_delete_event(_, _),
             return (Some(Msg::Quit), Inhibit(false))
         );
-        connect!(relm, progress_bar, connect_value_changed(_), Msg::AudioSkip);
+
+        connect!(relm, progress_bar, connect_value_changed(_), Msg::Stop);
+        connect!(
+            relm,
+            progress_bar,
+            connect_button_release_event(bar, _),
+            return (Some(Msg::AudioSkip(bar.value() as usize)), Inhibit(false))
+        );
 
         // Main Menu Items
         let open_menu_item: MenuItem = builder.object("open_menu").unwrap();
