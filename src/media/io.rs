@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use glib::{source_remove, MainContext, SourceId};
 use std::thread;
@@ -87,6 +88,9 @@ pub struct MediaWidgets {
     pub stop_button: gtk::Button,
     pub record_button: gtk::Button,
 
+    pub next_button: Rc<gtk::Button>,
+    pub prev_button: Rc<gtk::Button>,
+
     pub progress_bar: gtk::Scrollbar,
     pub time_progress_label: gtk::Label,
 }
@@ -98,6 +102,10 @@ pub struct Media {
     play_button: gtk::Button,
     stop_button: gtk::Button,
     record_button: gtk::Button,
+
+    next_button: Rc<gtk::Button>,
+    prev_button: Rc<gtk::Button>,
+    nav_button_state: (bool, bool),
 
     playback_widget: PlaybackWidget,
 }
@@ -114,6 +122,10 @@ impl Media {
             play_button: widgets.play_button,
             stop_button: widgets.stop_button,
             record_button: widgets.record_button,
+
+            next_button: widgets.next_button,
+            prev_button: widgets.prev_button,
+            nav_button_state: (false, false),
 
             playback_widget,
         }
@@ -179,11 +191,23 @@ impl Media {
         let record_button = self.record_button.clone();
         let stop_button = self.stop_button.clone();
 
+        let next_button = self.next_button.clone();
+        let prev_button = self.prev_button.clone();
+        self.nav_button_state = (
+            self.next_button.get_sensitive(),
+            self.prev_button.get_sensitive(),
+        );
+
+        let (next_button_sensitivity, prev_button_sensitivity) = self.nav_button_state;
+
         let mut playback_widgets_clone = self.playback_widget.clone();
         let playback_id = rx.attach(None, move |new_pos_secs| {
             play_button.set_sensitive(false);
             record_button.set_sensitive(false);
             stop_button.set_sensitive(true);
+
+            next_button.set_sensitive(false);
+            prev_button.set_sensitive(false);
 
             playback_widgets_clone.set_current(new_pos_secs);
             playback_widgets_clone.update();
@@ -192,6 +216,9 @@ impl Media {
                 play_button.set_sensitive(true);
                 record_button.set_sensitive(true);
                 stop_button.set_sensitive(false);
+
+                next_button.set_sensitive(next_button_sensitivity);
+                prev_button.set_sensitive(prev_button_sensitivity);
 
                 glib::Continue(false);
             }
@@ -247,11 +274,22 @@ impl Media {
         let record_button = self.record_button.clone();
         let stop_button = self.stop_button.clone();
 
+        let next_button = self.next_button.clone();
+        let prev_button = self.prev_button.clone();
+
+        self.nav_button_state = (
+            self.next_button.get_sensitive(),
+            self.prev_button.get_sensitive(),
+        );
+
         let mut playback_widgets_clone = self.playback_widget.clone();
         let recording_id = rx.attach(None, move |new_pos_secs| {
             play_button.set_sensitive(false);
             record_button.set_sensitive(false);
             stop_button.set_sensitive(true);
+
+            next_button.set_sensitive(false);
+            prev_button.set_sensitive(false);
 
             playback_widgets_clone.set_current(new_pos_secs);
             playback_widgets_clone.set_total(new_pos_secs);
@@ -263,6 +301,8 @@ impl Media {
         self.stream_updater = Some(recording_id);
     }
 
+    /// Stops the current playback or recording, reverting the playback widgets
+    /// back to normal.
     pub fn stop(&mut self) {
         if let Some(source) = self.stream_updater.take() {
             source_remove(source);
@@ -271,10 +311,34 @@ impl Media {
         self.play_button.set_sensitive(true);
         self.record_button.set_sensitive(true);
         self.stop_button.set_sensitive(false);
+
+        self.next_button.set_sensitive(self.nav_button_state.0);
+        self.prev_button.set_sensitive(self.nav_button_state.1);
     }
 }
 
-/// Returns a stream that'll broadcast the input file provided, as well as the expected duration in milliseconds.
+/// Returns a stream and duration in seconds tuple that will immediately start
+/// playing audio from the specified output device and its starting position in
+/// seconds from the location of the input file. An error is returned if something
+/// went wrong in setting it up.
+///
+/// # Examples
+///
+/// ```
+/// let host = cpal::default_host();
+/// let default_output_device = host
+///         .default_output_device()
+///         .expect("Unable to get default output device.");
+///
+/// let default_output_config = default_output_device
+///         .default_output_config()
+///         .expect("Unable to get output's default config.");
+///
+/// let audio_path = Path::new("test.wav").to_path_buf();
+///
+/// let output_stream_result = output_stream_from(default_output_device, default_output_config, audio_path);
+/// assert!(output_stream_result.is_ok());
+/// ```
 fn output_stream_from(
     output_device: Device,
     starting_pos_secs: usize,
@@ -360,6 +424,27 @@ where
     }
 }
 
+/// Returns a stream that will immediately start recording audio from the specified
+/// input device and its configuration (Sample Rate, Channels) to the location of the
+/// input file. An error is returned if something went wrong in setting it up.
+///
+/// # Examples
+///
+/// ```
+/// let host = cpal::default_host();
+/// let default_input_device = host
+///         .default_input_device()
+///         .expect("Unable to get default input device.");
+///
+/// let default_input_config = default_input_device
+///         .default_input_config()
+///         .expect("Unable to get input's default config.");
+///
+/// let audio_path = Path::new("test.wav").to_path_buf();
+///
+/// let input_stream_result = input_stream_from(default_input_device, default_input_config, audio_path);
+/// assert!(input_stream_result.is_ok());
+/// ```
 fn input_stream_from(
     input_device: Device,
     input_config: SupportedStreamConfig,

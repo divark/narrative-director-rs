@@ -1,8 +1,6 @@
-/*
-* This is needed to ensure that the application
-* does not start with a console in the background
-* when the application runs on Windows.
- */
+// This is needed to ensure that the application
+// does not start with a console in the background
+// when the application runs on Windows.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use gtk::prelude::*;
@@ -10,6 +8,7 @@ use gtk::{Builder, Button, Inhibit, Label, MenuItem, Scrollbar, TextView, Window
 use relm::{connect, Relm, Update, Widget};
 use relm_derive::Msg;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 mod media;
 use media::io::*;
@@ -284,12 +283,14 @@ impl Widget for Win {
         );
 
         // Custom Widgets
+        let next_button: Rc<Button> = Rc::new(next_button);
+        let prev_button: Rc<Button> = Rc::new(prev_button);
 
         // Paragraph Viewer setup
         let viewer_widgets = ViewerWidgets {
             paragraph_view,
-            next_button,
-            prev_button,
+            next_button: next_button.clone(),
+            prev_button: prev_button.clone(),
             progress_counter: text_progress_counter,
         };
 
@@ -300,6 +301,10 @@ impl Widget for Win {
             play_button,
             stop_button,
             record_button,
+
+            prev_button: prev_button.clone(),
+            next_button: next_button.clone(),
+
             progress_bar,
             time_progress_label: audio_progress_label,
         };

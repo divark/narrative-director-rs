@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use gtk::prelude::*;
 use gtk::{Button, Label, TextView};
@@ -49,8 +50,8 @@ impl Counter {
 
 pub struct ViewerWidgets {
     pub paragraph_view: TextView,
-    pub next_button: Button,
-    pub prev_button: Button,
+    pub next_button: Rc<Button>,
+    pub prev_button: Rc<Button>,
 
     pub progress_counter: Label,
 }
@@ -60,8 +61,8 @@ pub struct ParagraphViewer {
     paragraph_num: usize,
 
     paragraph_view: TextView,
-    next_button: Button,
-    prev_button: Button,
+    next_button: Rc<Button>,
+    prev_button: Rc<Button>,
     progress_counter: Counter,
 }
 
@@ -200,8 +201,8 @@ mod tests {
 
         let paragraph_view: TextView = builder.object("chunk_view_txtviewer").unwrap();
 
-        let prev_button: Button = builder.object("prev_chunk_btn").unwrap();
-        let next_button: Button = builder.object("next_chunk_btn").unwrap();
+        let prev_button: Rc<Button> = Rc::new(builder.object("prev_chunk_btn").unwrap());
+        let next_button: Rc<Button> = Rc::new(builder.object("next_chunk_btn").unwrap());
 
         let text_progress_counter: Label = builder.object("chunk_position_lbl").unwrap();
 
