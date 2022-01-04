@@ -4,7 +4,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use gtk::prelude::*;
-use gtk::{Builder, Button, Inhibit, Label, MenuItem, Scrollbar, TextView, Window};
+use gtk::{
+    Builder, Button, ComboBoxText, Dialog, EventBox, FileChooser, Inhibit, Label, MenuItem,
+    ResponseType, Scrollbar, TextView, Window,
+};
 use relm::{connect, Relm, Update, Widget};
 use relm_derive::Msg;
 use std::path::PathBuf;
@@ -56,12 +59,11 @@ pub struct Widgets {
     open_menu_item: MenuItem,
     goto_menu_item: MenuItem,
     preferences_menu_item: MenuItem,
-    about_menu_item: MenuItem,
-    quit_menu_item: MenuItem,
 
     // Custom Widgets
     paragraph_viewer: ParagraphViewer,
     media_controller: Media,
+    preference_widgets: PreferenceWidgets,
 }
 
 /// Abstracts the whole application, merging
@@ -179,13 +181,19 @@ impl Update for Win {
                         .show_paragraph_at(session.paragraph_num());
 
                     self.widgets.goto_menu_item.set_sensitive(true);
+                    self.widgets.preferences_menu_item.set_sensitive(true);
 
                     self.model.current_session = Some(session);
 
                     load_audio_file(&self.model, &mut self.widgets);
                 }
             }
-            Msg::OpenPreferences => todo!(),
+            Msg::OpenPreferences => {
+                if let Some(session) = self.model.current_session.as_mut() {
+                    preferences(&mut self.widgets.preference_widgets, session);
+                    load_audio_file(&self.model, &mut self.widgets);
+                }
+            }
             Msg::About => about(&self.widgets.window),
             Msg::Quit => {
                 if let Some(session) = &mut self.model.current_session {
@@ -228,6 +236,14 @@ impl Widget for Win {
         // Text Widgets
         let text_progress_counter: Label = builder.object("chunk_position_lbl").unwrap();
         let paragraph_view: TextView = builder.object("chunk_view_txtviewer").unwrap();
+        let chunk_progress_eventbox: EventBox = builder.object("chunk_progress_eventbox").unwrap();
+
+        connect!(
+            relm,
+            chunk_progress_eventbox,
+            connect_button_press_event(_, _),
+            return (Some(Msg::GoTo), Inhibit(false))
+        );
 
         // Media IO Items
         let prev_button: Button = builder.object("prev_chunk_btn").unwrap();
@@ -311,6 +327,35 @@ impl Widget for Win {
 
         let media_controller = Media::new(media_widgets);
 
+        // Preference Widgets Setup
+        let preferences_dialog: Dialog = builder.object("preferences_dialog").unwrap();
+        preferences_dialog
+            .add_buttons(&[("Ok", ResponseType::Ok), ("Cancel", ResponseType::Cancel)]);
+
+        preferences_dialog.set_default_response(ResponseType::Ok);
+        // General - Preferences
+        let project_file_chooser: FileChooser = builder.object("project_file_chooser").unwrap();
+
+        // Audio - Preferences
+        let input_device_cbox: ComboBoxText = builder.object("input_device_cbox").unwrap();
+        let input_sample_rate_cbox: ComboBoxText =
+            builder.object("input_sample_rate_cbox").unwrap();
+        let input_channels_cbox: ComboBoxText = builder.object("input_channels_cbox").unwrap();
+
+        let output_device_cbox: ComboBoxText = builder.object("output_device_cbox").unwrap();
+
+        let preference_widgets = PreferenceWidgets {
+            dialog: preferences_dialog,
+
+            project_location_chooser: project_file_chooser,
+
+            input_device_name_chooser: input_device_cbox,
+            input_device_sample_rate_chooser: input_sample_rate_cbox,
+            input_device_channels_chooser: input_channels_cbox,
+
+            output_device_name_chooser: output_device_cbox,
+        };
+
         Win {
             model,
             widgets: Widgets {
@@ -319,11 +364,10 @@ impl Widget for Win {
                 open_menu_item,
                 goto_menu_item,
                 preferences_menu_item,
-                about_menu_item,
-                quit_menu_item,
 
                 paragraph_viewer,
                 media_controller,
+                preference_widgets,
             },
         }
     }

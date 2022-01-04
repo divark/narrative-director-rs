@@ -8,15 +8,17 @@ use std::thread;
 use std::time::Duration;
 
 use cpal::traits::{DeviceTrait, HostTrait};
-use cpal::{Device, SampleFormat, SampleRate, Stream, StreamConfig, SupportedStreamConfig};
+use cpal::{
+    default_host, Device, SampleFormat, SampleRate, Stream, StreamConfig, SupportedStreamConfig,
+};
 use hound::{WavReader, WavSpec, WavWriter};
+
+use serde::{Deserialize, Serialize};
 
 use anyhow::{bail, Result};
 
 use gtk::prelude::*;
 use gtk::Adjustment;
-
-use crate::sessions::session::AudioInput;
 
 #[derive(Clone)]
 struct PlaybackWidget {
@@ -315,6 +317,213 @@ impl Media {
         self.next_button.set_sensitive(self.nav_button_state.0);
         self.prev_button.set_sensitive(self.nav_button_state.1);
     }
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub struct AudioOutput {
+    output_device_name: String,
+}
+
+impl AudioOutput {
+    pub fn new() -> AudioOutput {
+        let host = default_host();
+        let output_device = host
+            .default_output_device()
+            .expect("Could not retrieve a default output device.");
+
+        AudioOutput {
+            output_device_name: output_device
+                .name()
+                .unwrap_or_else(|_| "Default".to_string()),
+        }
+    }
+
+    pub fn set_device_name(&mut self, name: String) {
+        self.output_device_name = name;
+    }
+
+    pub fn device_name(&self) -> &str {
+        &self.output_device_name
+    }
+
+    pub fn to_device(&self) -> Device {
+        let host = default_host();
+        let output_device = host
+            .output_devices()
+            .expect("No audio devices found for output.")
+            .find(|device| {
+                if let Ok(named_device) = device.name() {
+                    return named_device == self.output_device_name;
+                } else {
+                    return false;
+                }
+            })
+            .expect("Could not find output device.");
+
+        output_device
+    }
+}
+
+pub fn output_device_names() -> Vec<String> {
+    let mut output_device_names = Vec::new();
+
+    let host = default_host();
+    let output_devices = host.output_devices().ok();
+    if output_devices.is_none() {
+        return output_device_names;
+    }
+
+    output_device_names = output_devices
+        .unwrap()
+        .filter_map(|device| device.name().ok())
+        .collect::<Vec<String>>();
+
+    output_device_names
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub struct AudioInput {
+    input_device_name: String,
+    sample_rate: u32,
+    channels: u16,
+}
+
+impl AudioInput {
+    pub fn new() -> AudioInput {
+        let host = default_host();
+        let input_device = host
+            .default_input_device()
+            .expect("Could not retrieve a default input device.");
+
+        let input_config = input_device
+            .default_input_config()
+            .expect("Could not retrieve the properties from the default input device.");
+
+        AudioInput {
+            input_device_name: input_device
+                .name()
+                .unwrap_or_else(|_| "Default".to_string()),
+            sample_rate: input_config.sample_rate().0,
+            channels: input_config.channels(),
+        }
+    }
+
+    pub fn set_device_name(&mut self, name: String) {
+        self.input_device_name = name;
+    }
+
+    pub fn device_name(&self) -> &str {
+        &self.input_device_name
+    }
+
+    pub fn set_sample_rate(&mut self, sample_rate: u32) {
+        self.sample_rate = sample_rate;
+    }
+
+    pub fn sample_rate(&self) -> u32 {
+        self.sample_rate
+    }
+
+    pub fn sample_rates(&self) -> Vec<u32> {
+        let mut found_sample_rates = Vec::new();
+
+        // 1: Get supported configurations
+        let input_device = self.to_device();
+        let supported_configs = input_device
+            .supported_input_configs()
+            .expect("Could not find input configs for calculating supported sample rates.");
+
+        // 2: Calculate sample rates using the min and max as reference.
+        const SUPPORTED_SAMPLE_RATES: [u32; 6] = [16000, 32000, 44100, 48000, 88200, 96000];
+
+        supported_configs.for_each(|config| {
+            for sample_rate in SUPPORTED_SAMPLE_RATES {
+                if sample_rate >= config.min_sample_rate().0
+                    && sample_rate <= config.max_sample_rate().0
+                {
+                    found_sample_rates.push(sample_rate);
+                }
+            }
+        });
+
+        found_sample_rates.sort_unstable();
+        found_sample_rates.dedup();
+
+        found_sample_rates
+    }
+
+    pub fn set_channels(&mut self, channels: u16) {
+        self.channels = channels;
+    }
+
+    pub fn channel(&self) -> u16 {
+        self.channels
+    }
+
+    pub fn channels(&self) -> Vec<u16> {
+        let mut found_channels: Vec<u16> = Vec::new();
+
+        // 1: Get supported configurations
+        let input_device = self.to_device();
+        let supported_configs = input_device
+            .supported_input_configs()
+            .expect("Could not find input configs for calculating supported channels.");
+
+        // 2: Filter by channel count
+        supported_configs.for_each(|config| {
+            found_channels.push(config.channels());
+        });
+
+        found_channels.sort_unstable();
+        found_channels.dedup();
+
+        found_channels
+    }
+
+    pub fn to_device(&self) -> Device {
+        let host = default_host();
+        let input_device = host
+            .input_devices()
+            .expect("No audio devices found for output.")
+            .find(|device| {
+                if let Ok(named_device) = device.name() {
+                    return named_device == self.input_device_name;
+                } else {
+                    return false;
+                }
+            })
+            .expect("Could not find output device.");
+
+        input_device
+    }
+
+    pub fn config(&self) -> SupportedStreamConfig {
+        let input_device = self.to_device();
+
+        input_device
+            .supported_input_configs()
+            .unwrap()
+            .find(|config| config.channels() == self.channels)
+            .expect("Could not find a device config with given sample rate and channels.")
+            .with_sample_rate(SampleRate(self.sample_rate))
+    }
+}
+
+pub fn input_device_names() -> Vec<String> {
+    let mut input_device_names = Vec::new();
+
+    let host = default_host();
+    let input_devices = host.input_devices().ok();
+    if input_devices.is_none() {
+        return input_device_names;
+    }
+
+    input_device_names = input_devices
+        .unwrap()
+        .filter_map(|device| device.name().ok())
+        .collect::<Vec<String>>();
+
+    input_device_names
 }
 
 /// Returns a stream and duration in seconds tuple that will immediately start

@@ -1,118 +1,8 @@
-use cpal::traits::{DeviceTrait, HostTrait};
-use cpal::{default_host, Device, SampleRate, SupportedStreamConfig};
+use crate::{AudioInput, AudioOutput};
 use serde::{Deserialize, Serialize};
 use std::fs::{write, DirBuilder, File};
 use std::io::Read;
 use std::path::PathBuf;
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-pub struct AudioInput {
-    input_device_name: String,
-    sample_rate: u32,
-    channels: u16,
-}
-
-impl AudioInput {
-    pub fn new() -> AudioInput {
-        let host = default_host();
-        let input_device = host
-            .default_input_device()
-            .expect("Could not retrieve a default input device.");
-
-        let input_config = input_device
-            .default_input_config()
-            .expect("Could not retrieve the properties from the default input device.");
-
-        AudioInput {
-            input_device_name: input_device
-                .name()
-                .unwrap_or_else(|_| "Default".to_string()),
-            sample_rate: input_config.sample_rate().0,
-            channels: input_config.channels(),
-        }
-    }
-
-    pub fn set_device_name(&mut self, name: String) {
-        self.input_device_name = name;
-    }
-
-    pub fn set_sample_rate(&mut self, sample_rate: u32) {
-        self.sample_rate = sample_rate;
-    }
-
-    pub fn set_channels(&mut self, channels: u16) {
-        self.channels = channels;
-    }
-
-    pub fn to_device(&self) -> Device {
-        let host = default_host();
-        let input_device = host
-            .input_devices()
-            .expect("No audio devices found for output.")
-            .find(|device| {
-                if let Ok(named_device) = device.name() {
-                    return named_device == self.input_device_name;
-                } else {
-                    return false;
-                }
-            })
-            .expect("Could not find output device.");
-
-        input_device
-    }
-
-    pub fn config(&self) -> SupportedStreamConfig {
-        let input_device = self.to_device();
-
-        input_device
-            .supported_input_configs()
-            .unwrap()
-            .find(|config| config.channels() == self.channels)
-            .expect("Could not find a device config with given sample rate and channels.")
-            .with_sample_rate(SampleRate(self.sample_rate))
-    }
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-pub struct AudioOutput {
-    output_device_name: String,
-}
-
-impl AudioOutput {
-    pub fn new() -> AudioOutput {
-        let host = default_host();
-        let output_device = host
-            .default_output_device()
-            .expect("Could not retrieve a default output device.");
-
-        AudioOutput {
-            output_device_name: output_device
-                .name()
-                .unwrap_or_else(|_| "Default".to_string()),
-        }
-    }
-
-    pub fn set_device_name(&mut self, name: String) {
-        self.output_device_name = name;
-    }
-
-    pub fn to_device(&self) -> Device {
-        let host = default_host();
-        let output_device = host
-            .output_devices()
-            .expect("No audio devices found for output.")
-            .find(|device| {
-                if let Ok(named_device) = device.name() {
-                    return named_device == self.output_device_name;
-                } else {
-                    return false;
-                }
-            })
-            .expect("Could not find output device.");
-
-        output_device
-    }
-}
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Font {
@@ -243,6 +133,10 @@ impl Session {
         self.paragraph_num
     }
 
+    pub fn set_project_directory(&mut self, new_directory: PathBuf) {
+        self.project_directory = new_directory;
+    }
+
     pub fn project_directory(&self) -> PathBuf {
         self.project_directory.clone()
     }
@@ -251,8 +145,16 @@ impl Session {
         &self.audio_output
     }
 
+    pub fn audio_output_mut(&mut self) -> &mut AudioOutput {
+        &mut self.audio_output
+    }
+
     pub fn audio_input(&self) -> &AudioInput {
         &self.audio_input
+    }
+
+    pub fn audio_input_mut(&mut self) -> &mut AudioInput {
+        &mut self.audio_input
     }
 }
 

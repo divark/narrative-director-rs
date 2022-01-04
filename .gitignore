@@ -1,4 +1,5 @@
 /target
+/.cargo
 
 # IDEs and Code Editors
 .idea/*
