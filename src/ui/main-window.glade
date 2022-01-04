@@ -32,6 +32,7 @@
                         <property name="can-focus">False</property>
                         <property name="label" translatable="yes">Open</property>
                         <property name="use-underline">True</property>
+                        <accelerator key="o" signal="activate" modifiers="GDK_CONTROL_MASK"/>
                       </object>
                     </child>
                     <child>
@@ -46,6 +47,7 @@
                         <property name="can-focus">False</property>
                         <property name="label" translatable="yes">Quit</property>
                         <property name="use-underline">True</property>
+                        <accelerator key="q" signal="activate" modifiers="GDK_CONTROL_MASK"/>
                       </object>
                     </child>
                   </object>
@@ -69,6 +71,7 @@
                         <property name="can-focus">False</property>
                         <property name="label" translatable="yes">Go To</property>
                         <property name="use-underline">True</property>
+                        <accelerator key="g" signal="activate" modifiers="GDK_CONTROL_MASK"/>
                       </object>
                     </child>
                     <child>
@@ -190,6 +193,7 @@
                 <property name="sensitive">False</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>
+                <accelerator key="Left" signal="activate" modifiers="GDK_CONTROL_MASK"/>
               </object>
               <packing>
                 <property name="left-attach">0</property>
@@ -203,6 +207,7 @@
                 <property name="sensitive">False</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>
+                <accelerator key="Right" signal="activate" modifiers="GDK_CONTROL_MASK"/>
               </object>
               <packing>
                 <property name="left-attach">2</property>
