@@ -86,6 +86,7 @@ impl PlaybackWidget {
 }
 
 pub struct MediaWidgets {
+    pub open_menu_item: gtk::MenuItem,
     pub play_button: gtk::Button,
     pub stop_button: gtk::Button,
     pub record_button: gtk::Button,
@@ -100,6 +101,8 @@ pub struct MediaWidgets {
 pub struct Media {
     audio_location: Option<PathBuf>,
     stream_updater: Option<SourceId>,
+
+    open_menu_item: gtk::MenuItem,
 
     play_button: gtk::Button,
     stop_button: gtk::Button,
@@ -120,6 +123,8 @@ impl Media {
         Media {
             audio_location: None,
             stream_updater: None,
+
+            open_menu_item: widgets.open_menu_item,
 
             play_button: widgets.play_button,
             stop_button: widgets.stop_button,
@@ -189,6 +194,8 @@ impl Media {
             }
         });
 
+        let open_menu_item = self.open_menu_item.clone();
+
         let play_button = self.play_button.clone();
         let record_button = self.record_button.clone();
         let stop_button = self.stop_button.clone();
@@ -204,6 +211,8 @@ impl Media {
 
         let mut playback_widgets_clone = self.playback_widget.clone();
         let playback_id = rx.attach(None, move |new_pos_secs| {
+            open_menu_item.set_sensitive(false);
+
             play_button.set_sensitive(false);
             record_button.set_sensitive(false);
             stop_button.set_sensitive(true);
@@ -215,6 +224,8 @@ impl Media {
             playback_widgets_clone.update();
 
             if playback_widgets_clone.current_pos == playback_widgets_clone.total {
+                open_menu_item.set_sensitive(true);
+
                 play_button.set_sensitive(true);
                 record_button.set_sensitive(true);
                 stop_button.set_sensitive(false);
@@ -270,6 +281,8 @@ impl Media {
             }
         });
 
+        let open_menu_item = self.open_menu_item.clone();
+
         let play_button = self.play_button.clone();
         let record_button = self.record_button.clone();
         let stop_button = self.stop_button.clone();
@@ -284,6 +297,8 @@ impl Media {
 
         let mut playback_widgets_clone = self.playback_widget.clone();
         let recording_id = rx.attach(None, move |new_pos_secs| {
+            open_menu_item.set_sensitive(false);
+
             play_button.set_sensitive(false);
             record_button.set_sensitive(false);
             stop_button.set_sensitive(true);
@@ -307,6 +322,8 @@ impl Media {
         if let Some(source) = self.stream_updater.take() {
             source_remove(source);
         }
+
+        self.open_menu_item.set_sensitive(true);
 
         self.play_button.set_sensitive(true);
         self.record_button.set_sensitive(true);

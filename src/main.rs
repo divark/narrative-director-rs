@@ -56,7 +56,6 @@ pub struct Widgets {
     window: Window,
 
     // Menu Widgets
-    open_menu_item: MenuItem,
     goto_menu_item: MenuItem,
     preferences_menu_item: MenuItem,
 
@@ -313,6 +312,8 @@ impl Widget for Win {
 
         // Media Controller setup
         let media_widgets = MediaWidgets {
+            open_menu_item,
+
             play_button,
             stop_button,
             record_button,
@@ -360,7 +361,6 @@ impl Widget for Win {
             widgets: Widgets {
                 window,
 
-                open_menu_item,
                 goto_menu_item,
                 preferences_menu_item,
 
