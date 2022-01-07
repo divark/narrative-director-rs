@@ -381,7 +381,7 @@ pub fn output_device_names() -> Vec<String> {
     output_device_names
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct AudioInput {
     input_device_name: String,
     sample_rate: u32,

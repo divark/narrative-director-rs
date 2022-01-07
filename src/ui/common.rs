@@ -1,4 +1,4 @@
-use crate::{input_device_names, output_device_names, Session};
+use crate::{input_device_names, media::io::AudioInput, output_device_names, Session};
 use gtk::prelude::*;
 use std::path::PathBuf;
 
@@ -187,10 +187,42 @@ pub fn preferences(preference_widgets: &PreferenceWidgets, session: &mut Session
         &session.audio_output().device_name().to_string(),
     );
 
+    // Change the Sample Rate and Channels when a new Input Device has been chosen.
+    let input_sample_rate_chooser = preference_widgets.input_device_sample_rate_chooser.clone();
+    let input_channel_chooser = preference_widgets.input_device_channels_chooser.clone();
+    let device_changer_id = preference_widgets
+        .input_device_name_chooser
+        .connect_changed(move |combobox| {
+            let device_name = combobox
+                .active_text()
+                .expect("Could not get device name for input.")
+                .to_string();
+
+            let mut audio_input = AudioInput::new();
+            audio_input.set_device_name(device_name);
+
+            // Populate Sample Rates regardless of what's present.
+            let sample_rates = audio_input.sample_rates();
+            populate_combobox(&input_sample_rate_chooser, &sample_rates);
+            set_active_in_combobox(
+                &input_sample_rate_chooser,
+                &sample_rates,
+                &audio_input.sample_rate(),
+            );
+
+            // Populate Channels regardless of what's present.
+            let channels = audio_input.channels();
+            populate_combobox(&input_channel_chooser, &channels);
+            set_active_in_combobox(&input_channel_chooser, &channels, &audio_input.channel());
+        });
+
     // Wait for the user's response.
     preference_widgets.dialog.show_all();
     let preference_response = preference_widgets.dialog.run();
     if preference_response != ResponseType::Ok {
+        preference_widgets
+            .input_device_name_chooser
+            .disconnect(device_changer_id);
         preference_widgets.dialog.hide();
         return;
     }
@@ -237,5 +269,8 @@ pub fn preferences(preference_widgets: &PreferenceWidgets, session: &mut Session
             .to_string(),
     );
 
+    preference_widgets
+        .input_device_name_chooser
+        .disconnect(device_changer_id);
     preference_widgets.dialog.hide();
 }

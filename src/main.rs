@@ -189,7 +189,7 @@ impl Update for Win {
                 }
             }
             Msg::OpenPreferences => {
-                if let Some(session) = self.model.current_session.as_mut() {
+                if let Some(session) = &mut self.model.current_session {
                     preferences(&mut self.widgets.preference_widgets, session);
                     load_audio_file(&self.model, &mut self.widgets);
                 }
