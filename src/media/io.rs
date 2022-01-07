@@ -221,8 +221,6 @@ impl Media {
 
                 next_button.set_sensitive(next_button_sensitivity);
                 prev_button.set_sensitive(prev_button_sensitivity);
-
-                glib::Continue(false);
             }
 
             glib::Continue(true)
@@ -353,9 +351,9 @@ impl AudioOutput {
             .expect("No audio devices found for output.")
             .find(|device| {
                 if let Ok(named_device) = device.name() {
-                    return named_device == self.output_device_name;
+                    named_device == self.output_device_name
                 } else {
-                    return false;
+                    false
                 }
             })
             .expect("Could not find output device.");
@@ -487,9 +485,9 @@ impl AudioInput {
             .expect("No audio devices found for output.")
             .find(|device| {
                 if let Ok(named_device) = device.name() {
-                    return named_device == self.input_device_name;
+                    named_device == self.input_device_name
                 } else {
-                    return false;
+                    false
                 }
             })
             .expect("Could not find output device.");
@@ -669,17 +667,17 @@ fn input_stream_from(
     // Use the config to hook up the input (Some microphone) to the output (A file)
     let io_stream = match input_config.sample_format() {
         SampleFormat::F32 => input_device.build_input_stream(
-            &input_config.clone().into(),
+            &input_config.into(),
             move |data, _: &_| write_input_data::<f32, f32>(data, &mut writer),
             err_fn,
         )?,
         SampleFormat::I16 => input_device.build_input_stream(
-            &input_config.clone().into(),
+            &input_config.into(),
             move |data, _: &_| write_input_data::<i16, i16>(data, &mut writer),
             err_fn,
         )?,
         SampleFormat::U16 => input_device.build_input_stream(
-            &input_config.clone().into(),
+            &input_config.into(),
             move |data, _: &_| write_input_data::<u16, i16>(data, &mut writer),
             err_fn,
         )?,

@@ -135,7 +135,7 @@ where
     let current_pos = items
         .iter()
         .position(|item| item == active_item)
-        .unwrap_or_else(|| 0);
+        .unwrap_or(0);
     combobox.set_active(Some(current_pos as u32));
 }
 

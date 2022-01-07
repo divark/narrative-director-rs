@@ -130,8 +130,7 @@ impl Update for Win {
             }
             Msg::Stop => self.widgets.media_controller.stop(),
             Msg::Record => self.widgets.media_controller.record(
-                &self
-                    .model
+                self.model
                     .current_session
                     .as_ref()
                     .expect("Session should exist on Recording.")
@@ -190,7 +189,7 @@ impl Update for Win {
             }
             Msg::OpenPreferences => {
                 if let Some(session) = &mut self.model.current_session {
-                    preferences(&mut self.widgets.preference_widgets, session);
+                    preferences(&self.widgets.preference_widgets, session);
                     load_audio_file(&self.model, &mut self.widgets);
                 }
             }
@@ -318,8 +317,8 @@ impl Widget for Win {
             stop_button,
             record_button,
 
-            prev_button: prev_button.clone(),
-            next_button: next_button.clone(),
+            prev_button,
+            next_button,
 
             progress_bar,
             time_progress_label: audio_progress_label,
