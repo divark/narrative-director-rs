@@ -6,7 +6,8 @@
 use gtk::prelude::*;
 use gtk::{
     Builder, Button, ComboBoxText, Dialog, EventBox, FileChooser, Inhibit, Label, MenuItem,
-    ResponseType, Scrollbar, TextView, Window,
+    RecentChooserMenuBuilder, RecentFilter, RecentManager, ResponseType, Scrollbar, TextView,
+    Window,
 };
 use relm::{connect, Relm, Update, Widget};
 use relm_derive::Msg;
@@ -42,6 +43,7 @@ enum Msg {
 
     GoTo,
     LoadFile,
+    LoadRecent(String),
     OpenPreferences,
     About,
     Quit,
@@ -85,6 +87,26 @@ fn load_audio_file(model: &Model, widgets: &mut Widgets) {
     ));
 
     widgets.media_controller.load(audio_file_location);
+}
+
+fn load_text_file(file_location: PathBuf, model: &mut Model, widgets: &mut Widgets) {
+    if let Some(session) = &mut model.current_session {
+        session.set_paragraph_num(widgets.paragraph_viewer.paragraph_num());
+        session.save();
+    }
+
+    let session =
+        Session::load(file_location.clone()).unwrap_or_else(|| Session::new(file_location.clone()));
+
+    widgets.paragraph_viewer.load_paragraphs(file_location);
+    widgets
+        .paragraph_viewer
+        .show_paragraph_at(session.paragraph_num());
+
+    widgets.goto_menu_item.set_sensitive(true);
+    widgets.preferences_menu_item.set_sensitive(true);
+
+    model.current_session = Some(session);
 }
 
 /// Implements the Event Handler of all User Actions for
@@ -162,27 +184,15 @@ impl Update for Win {
                     load_audio_file(&self.model, &mut self.widgets);
                 }
             }
+            Msg::LoadRecent(file_uri) => {
+                let file_location = PathBuf::from(file_uri);
+                load_text_file(file_location, &mut self.model, &mut self.widgets);
+                load_audio_file(&self.model, &mut self.widgets);
+            }
             Msg::LoadFile => {
                 let text_file_location = open(&self.widgets.window);
                 if let Some(file_location) = text_file_location {
-                    if let Some(session) = &mut self.model.current_session {
-                        session.set_paragraph_num(self.widgets.paragraph_viewer.paragraph_num());
-                        session.save();
-                    }
-
-                    let session = Session::load(file_location.clone())
-                        .unwrap_or_else(|| Session::new(file_location.clone()));
-
-                    self.widgets.paragraph_viewer.load_paragraphs(file_location);
-                    self.widgets
-                        .paragraph_viewer
-                        .show_paragraph_at(session.paragraph_num());
-
-                    self.widgets.goto_menu_item.set_sensitive(true);
-                    self.widgets.preferences_menu_item.set_sensitive(true);
-
-                    self.model.current_session = Some(session);
-
+                    load_text_file(file_location, &mut self.model, &mut self.widgets);
                     load_audio_file(&self.model, &mut self.widgets);
                 }
             }
@@ -274,6 +284,7 @@ impl Widget for Win {
 
         // Main Menu Items
         let open_menu_item: MenuItem = builder.object("open_menu").unwrap();
+        let open_recent_menu_item: MenuItem = builder.object("open_recent_menu").unwrap();
         let goto_menu_item: MenuItem = builder.object("goto_menu").unwrap();
         let preferences_menu_item: MenuItem = builder.object("preferences_menu").unwrap();
         let about_menu_item: MenuItem = builder.object("about_menu").unwrap();
@@ -295,6 +306,34 @@ impl Widget for Win {
             connect_delete_event(_, _),
             return (Some(Msg::Quit), Inhibit(false))
         );
+
+        let recent_manager: RecentManager =
+            RecentManager::default().expect("Could not load file recents manager.");
+
+        let text_file_filter = RecentFilter::new();
+        text_file_filter.set_name("UTF-8 Text Files");
+        text_file_filter.add_pattern("*.txt");
+
+        let recent_manager_menu = RecentChooserMenuBuilder::new()
+            .recent_manager(&recent_manager)
+            .filter(&text_file_filter)
+            .build();
+
+        connect!(
+            relm,
+            recent_manager_menu,
+            connect_item_activated(menubar),
+            Msg::LoadRecent(
+                menubar
+                    .current_item()
+                    .expect("Could not retrieve selected menu in Recent Manager")
+                    .uri_display()
+                    .expect("Could not retrieve URI of recently selected item")
+                    .to_string()
+            )
+        );
+
+        open_recent_menu_item.set_submenu(Some(&recent_manager_menu));
 
         // Custom Widgets
         let next_button: Rc<Button> = Rc::new(next_button);

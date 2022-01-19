@@ -36,6 +36,14 @@
                       </object>
                     </child>
                     <child>
+                      <object class="GtkMenuItem" id="open_recent_menu">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Open Recent</property>
+                        <property name="use-underline">True</property>
+                      </object>
+                    </child>
+                    <child>
                       <object class="GtkSeparatorMenuItem">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
