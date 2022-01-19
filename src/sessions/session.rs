@@ -157,5 +157,3 @@ impl Session {
         &mut self.audio_input
     }
 }
-
-// TODO: Write tests before integrating changes into main.

@@ -317,6 +317,8 @@ impl Widget for Win {
         let recent_manager_menu = RecentChooserMenuBuilder::new()
             .recent_manager(&recent_manager)
             .filter(&text_file_filter)
+            .local_only(true)
+            .show_not_found(false)
             .build();
 
         connect!(
