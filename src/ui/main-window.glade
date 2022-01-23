@@ -196,7 +196,7 @@
             <property name="column-homogeneous">True</property>
             <child>
               <object class="GtkButton" id="prev_chunk_btn">
-                <property name="label">Previous</property>
+                <property name="label">&lt;</property>
                 <property name="visible">True</property>
                 <property name="sensitive">False</property>
                 <property name="can-focus">True</property>
@@ -210,7 +210,7 @@
             </child>
             <child>
               <object class="GtkButton" id="next_chunk_btn">
-                <property name="label">Next</property>
+                <property name="label">&gt;</property>
                 <property name="visible">True</property>
                 <property name="sensitive">False</property>
                 <property name="can-focus">True</property>

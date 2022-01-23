@@ -89,7 +89,7 @@ pub fn go_to(parent_window: &Window, num_paragraphs: usize) -> Option<usize> {
 /// Postcondition: An About Dialog is shown until it is closed.
 pub fn about(parent_window: &Window) {
     let logo: Pixbuf =
-        Pixbuf::from_file("resources/images/icon.png").expect("Could not find icon file.");
+        Pixbuf::from_file("resources/images/icon.svg").expect("Could not find icon file.");
 
     let about_dialog = AboutDialogBuilder::new()
 		.program_name("Narrative Director")
@@ -139,6 +139,11 @@ where
     combobox.set_active(Some(current_pos as u32));
 }
 
+/// Shows the Preferences dialog, modifying the Session if the user commits any changes.
+///
+/// Preconditions: preference_widgets contains widgets that map to the Session's variables, and
+///                session is loaded from the current project.
+/// Postconditions: session is modified if a user saves the changes.
 pub fn preferences(preference_widgets: &PreferenceWidgets, session: &mut Session) {
     // Set the preference fields to mirror what's set in the current Session.
     preference_widgets

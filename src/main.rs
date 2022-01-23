@@ -158,17 +158,7 @@ impl Update for Win {
                     .audio_input(),
             ),
             Msg::AudioSkip(pos_secs) => {
-                let output_device = self
-                    .model
-                    .current_session
-                    .as_ref()
-                    .expect("Session should exist on playback.")
-                    .audio_output()
-                    .to_device();
-
-                self.widgets
-                    .media_controller
-                    .play_at(output_device, pos_secs);
+                self.widgets.media_controller.pause_at(pos_secs);
             }
             Msg::GoTo => {
                 let paragraph_num_choice = go_to(
@@ -235,7 +225,7 @@ impl Widget for Win {
         let icon_location = PathBuf::new()
             .join("resources")
             .join("images")
-            .join("icon.png");
+            .join("icon.svg");
 
         window
             .set_icon_from_file(icon_location)
@@ -274,7 +264,6 @@ impl Widget for Win {
             return (Some(Msg::Quit), Inhibit(false))
         );
 
-        connect!(relm, progress_bar, connect_value_changed(_), Msg::Stop);
         connect!(
             relm,
             progress_bar,

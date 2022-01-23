@@ -213,7 +213,7 @@ impl Media {
         let playback_id = rx.attach(None, move |new_pos_secs| {
             open_menu_item.set_sensitive(false);
 
-            play_button.set_sensitive(false);
+            play_button.set_label("Pause");
             record_button.set_sensitive(false);
             stop_button.set_sensitive(true);
 
@@ -226,7 +226,7 @@ impl Media {
             if playback_widgets_clone.current_pos == playback_widgets_clone.total {
                 open_menu_item.set_sensitive(true);
 
-                play_button.set_sensitive(true);
+                play_button.set_label("Play");
                 record_button.set_sensitive(true);
                 stop_button.set_sensitive(false);
 
@@ -249,7 +249,22 @@ impl Media {
             0
         };
 
-        self.play_at(output_device, start_pos_secs);
+        if self.play_button.label().unwrap() == "Pause" {
+            self.pause_at(start_pos_secs);
+        } else {
+            self.play_at(output_device, start_pos_secs);
+        }
+    }
+
+    pub fn pause_at(&mut self, pos_secs: usize) {
+        if self.stream_updater.is_some() {
+            self.stop();
+        }
+
+        self.playback_widget.set_current(pos_secs);
+        self.playback_widget.update();
+
+        self.play_button.set_label("Play");
     }
 
     pub fn record(&mut self, input_device: &AudioInput) {
@@ -331,6 +346,9 @@ impl Media {
 
         self.next_button.set_sensitive(self.nav_button_state.0);
         self.prev_button.set_sensitive(self.nav_button_state.1);
+
+        self.playback_widget.set_current(0);
+        self.playback_widget.update();
     }
 }
 
