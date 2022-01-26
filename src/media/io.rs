@@ -340,6 +340,7 @@ impl Media {
 
         self.open_menu_item.set_sensitive(true);
 
+        self.play_button.set_label("Play");
         self.play_button.set_sensitive(true);
         self.record_button.set_sensitive(true);
         self.stop_button.set_sensitive(false);
