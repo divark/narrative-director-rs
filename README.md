@@ -1,6 +1,6 @@
 # Narrative Director (Rust Edition)
 
-![Application Icon](resources/images/icon.png)
+![Application Icon](resources/images/icon.svg)
 
 Credit goes to [ColorfulSkyWisps](https://linktr.ee/ColorfulSkyWisps) for the creation of this logo. All rights reserved.
 
@@ -34,7 +34,7 @@ addition to having an excuse to learn about [Rust](https://www.rust-lang.org/) a
 2. Download [GTK+3](https://www.gtk.org/docs/installations/).
 3. Clone the repository.
 4. In a terminal, navigate to the repository.
-5. Run `cargo test -- --ignored` to ensure all features are working as intended.
+5. Run `cargo test -- --test-threads=1` to ensure all features are working as intended.
 6. Run `cargo run` to see the current state of the application.
 
 ## License

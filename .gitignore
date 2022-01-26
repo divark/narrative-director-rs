@@ -1,1 +1,10 @@
 /target
+/.cargo
+*.glade~
+
+# IDEs and Code Editors
+/.idea
+/.vscode
+
+# Mac-specific
+*.DS_Store
