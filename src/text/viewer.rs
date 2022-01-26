@@ -240,7 +240,7 @@ mod tests {
             .reopen()
             .expect("Could not open temporary file for writing.");
         paragraph_file
-            .write(FIRST_PARAGRAPH.as_bytes())
+            .write_all(FIRST_PARAGRAPH.as_bytes())
             .expect("Could not write to temporary file.");
 
         paragraph_file
@@ -256,7 +256,7 @@ mod tests {
             .reopen()
             .expect("Could not open temporary file for writing.");
         paragraph_file
-            .write(paragraphs.as_bytes())
+            .write_all(paragraphs.as_bytes())
             .expect("Could not write to temporary file.");
 
         paragraph_file
