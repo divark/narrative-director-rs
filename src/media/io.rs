@@ -55,7 +55,10 @@ impl PlaybackWidget {
 
     pub fn update(&mut self) {
         let current_pos = self.progress_bar.value() as usize;
-        let total = self.progress_bar.adjustment().upper() as usize;
+        let mut total = self.progress_bar.adjustment().upper() as usize;
+        if total == 0 {
+            total = 1;
+        }
 
         let playback_time = format!(
             "{}/{}",
