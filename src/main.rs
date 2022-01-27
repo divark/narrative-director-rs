@@ -1,7 +1,7 @@
 // This is needed to ensure that the application
 // does not start with a console in the background
 // when the application runs on Windows.
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![windows_subsystem = "windows"]
 
 use gtk::prelude::*;
 use gtk::{
@@ -225,7 +225,7 @@ impl Widget for Win {
         let icon_location = PathBuf::new()
             .join("resources")
             .join("images")
-            .join("icon.svg");
+            .join("icon.png");
 
         window
             .set_icon_from_file(icon_location)

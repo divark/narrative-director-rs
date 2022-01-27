@@ -7,7 +7,7 @@ use glib::{source_remove, MainContext, SourceId};
 use std::thread;
 use std::time::Duration;
 
-use cpal::traits::{DeviceTrait, HostTrait};
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{
     default_host, Device, SampleFormat, SampleRate, Stream, StreamConfig, SupportedStreamConfig,
 };
@@ -24,9 +24,6 @@ use gtk::Adjustment;
 struct PlaybackWidget {
     time_label: gtk::Label,
     progress_bar: gtk::Scrollbar,
-
-    current_pos: usize,
-    total: usize,
 }
 
 /// Converts ms to hours:minutes:seconds format
@@ -40,48 +37,38 @@ fn to_hh_mm_ss_str(secs: usize) -> String {
 
 impl PlaybackWidget {
     pub fn new(time_label: gtk::Label, progress_bar: gtk::Scrollbar) -> PlaybackWidget {
+        progress_bar.set_adjustment(&Adjustment::new(0.0, 0.0, 0.0, 1.0, 1.0, 1.0));
+
         PlaybackWidget {
             time_label,
             progress_bar,
-
-            current_pos: 0,
-            total: 0,
         }
     }
 
     pub fn set_current(&mut self, pos_secs: usize) {
-        self.current_pos = pos_secs;
+        self.progress_bar.set_value(pos_secs as f64);
     }
 
     pub fn set_total(&mut self, total_secs: usize) {
-        self.total = total_secs;
+        self.progress_bar.adjustment().set_upper(total_secs as f64);
     }
 
     pub fn update(&mut self) {
-        let secs_passed = self.current_pos as f64;
-        let secs_total = self.total as f64;
-
-        self.progress_bar.set_adjustment(&Adjustment::new(
-            secs_passed,
-            0.0,
-            secs_total,
-            1.0,
-            1.0,
-            1.0,
-        ));
+        let current_pos = self.progress_bar.value() as usize;
+        let total = self.progress_bar.adjustment().upper() as usize;
 
         let playback_time = format!(
             "{}/{}",
-            to_hh_mm_ss_str(self.current_pos),
-            to_hh_mm_ss_str(self.total)
+            to_hh_mm_ss_str(current_pos),
+            to_hh_mm_ss_str(total - 1)
         );
 
         self.time_label.set_text(&playback_time);
     }
 
     pub fn reset(&mut self) {
-        self.current_pos = 0;
-        self.total = 0;
+        self.progress_bar
+            .set_adjustment(&Adjustment::new(0.0, 0.0, 0.0, 1.0, 1.0, 1.0));
     }
 }
 
@@ -223,8 +210,13 @@ impl Media {
             playback_widgets_clone.set_current(new_pos_secs);
             playback_widgets_clone.update();
 
-            if playback_widgets_clone.current_pos == playback_widgets_clone.total {
+            let total_secs = playback_widgets_clone.progress_bar.adjustment().upper() as usize;
+
+            if new_pos_secs == total_secs {
                 open_menu_item.set_sensitive(true);
+
+                playback_widgets_clone.set_current(total_secs as usize);
+                playback_widgets_clone.update();
 
                 play_button.set_label("Play");
                 record_button.set_sensitive(true);
@@ -242,8 +234,9 @@ impl Media {
 
     pub fn play(&mut self, output_device: Device) {
         let progress_bar_pos_secs = self.playback_widget.progress_bar.value() as usize;
+        let total_secs = self.playback_widget.progress_bar.adjustment().upper() as usize;
 
-        let start_pos_secs = if progress_bar_pos_secs + 1 != self.playback_widget.total {
+        let start_pos_secs = if progress_bar_pos_secs + 1 != total_secs {
             progress_bar_pos_secs
         } else {
             0
@@ -636,6 +629,7 @@ fn output_stream_from(
 
     let duration_secs = (num_samples as f64 / sample_rate as f64).round() as usize;
 
+    output_stream.play()?;
     Ok((output_stream, duration_secs))
 }
 
@@ -719,5 +713,6 @@ fn input_stream_from(
         )?,
     };
 
+    io_stream.play()?;
     Ok(io_stream)
 }
