@@ -6,8 +6,8 @@
 use gtk::prelude::*;
 use gtk::{
     Builder, Button, ComboBoxText, Dialog, EventBox, FileChooser, Inhibit, Label, MenuItem,
-    RecentChooserMenuBuilder, RecentFilter, RecentManager, ResponseType, Scrollbar, TextView,
-    Window,
+    RecentChooserMenuBuilder, RecentFilter, RecentManager, ResponseType, Scrollbar, Statusbar,
+    TextView, Window,
 };
 use relm::{connect, Relm, Update, Widget};
 use relm_derive::Msg;
@@ -249,8 +249,10 @@ impl Widget for Win {
         let stop_button: Button = builder.object("stop_btn").unwrap();
         let record_button: Button = builder.object("record_btn").unwrap();
         let play_button: Button = builder.object("play/pause_btn").unwrap();
+
         let audio_progress_label: Label = builder.object("audio_progress_lbl").unwrap();
         let progress_bar: Scrollbar = builder.object("progress_bar").unwrap();
+        let status_bar: Statusbar = builder.object("playback_status_bar").unwrap();
 
         connect!(relm, prev_button, connect_clicked(_), Msg::Previous);
         connect!(relm, next_button, connect_clicked(_), Msg::Next);
@@ -353,6 +355,7 @@ impl Widget for Win {
 
             progress_bar,
             time_progress_label: audio_progress_label,
+            status_bar,
         };
 
         let media_controller = Media::new(media_widgets);

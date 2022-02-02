@@ -24,6 +24,7 @@ use gtk::Adjustment;
 struct PlaybackWidget {
     time_label: gtk::Label,
     progress_bar: gtk::Scrollbar,
+    status_bar: gtk::Statusbar,
 }
 
 /// Converts ms to hours:minutes:seconds format
@@ -36,12 +37,17 @@ fn to_hh_mm_ss_str(secs: usize) -> String {
 }
 
 impl PlaybackWidget {
-    pub fn new(time_label: gtk::Label, progress_bar: gtk::Scrollbar) -> PlaybackWidget {
+    pub fn new(
+        time_label: gtk::Label,
+        progress_bar: gtk::Scrollbar,
+        status_bar: gtk::Statusbar,
+    ) -> PlaybackWidget {
         progress_bar.set_adjustment(&Adjustment::new(0.0, 0.0, 0.0, 1.0, 1.0, 1.0));
 
         PlaybackWidget {
             time_label,
             progress_bar,
+            status_bar,
         }
     }
 
@@ -49,11 +55,19 @@ impl PlaybackWidget {
         self.progress_bar.set_value(pos_secs as f64);
     }
 
+    pub fn current(&self) -> usize {
+        self.progress_bar.value() as usize
+    }
+
     pub fn set_total(&mut self, total_secs: usize) {
         self.progress_bar.adjustment().set_upper(total_secs as f64);
     }
 
-    pub fn update(&mut self) {
+    pub fn total(&self) -> usize {
+        self.progress_bar.adjustment().upper() as usize
+    }
+
+    pub fn update_playback(&mut self) {
         let current_pos = self.progress_bar.value() as usize;
         let mut total = self.progress_bar.adjustment().upper() as usize;
         if total == 0 {
@@ -69,9 +83,29 @@ impl PlaybackWidget {
         self.time_label.set_text(&playback_time);
     }
 
+    pub fn update_recording(&mut self) {
+        let total = self.progress_bar.adjustment().upper() as usize;
+        self.set_current(total);
+
+        let playback_time = format!("{}/{}", to_hh_mm_ss_str(total), to_hh_mm_ss_str(total));
+
+        self.time_label.set_text(&playback_time);
+    }
+
     pub fn reset(&mut self) {
         self.progress_bar
             .set_adjustment(&Adjustment::new(0.0, 0.0, 0.0, 1.0, 1.0, 1.0));
+    }
+
+    pub fn notify_recording_complete(&self, filepath: &str) -> u32 {
+        let context_id = self.status_bar.context_id("Playback notification.");
+        self.status_bar
+            .push(context_id, &format!("Recording complete: {}", filepath))
+    }
+
+    pub fn clear_notification(&self, notification_pos: u32) {
+        let context_id = self.status_bar.context_id("Playback notification.");
+        StatusbarExt::remove(&self.status_bar, context_id, notification_pos);
     }
 }
 
@@ -86,6 +120,7 @@ pub struct MediaWidgets {
 
     pub progress_bar: gtk::Scrollbar,
     pub time_progress_label: gtk::Label,
+    pub status_bar: gtk::Statusbar,
 }
 
 pub struct Media {
@@ -107,8 +142,11 @@ pub struct Media {
 
 impl Media {
     pub fn new(widgets: MediaWidgets) -> Media {
-        let playback_widget =
-            PlaybackWidget::new(widgets.time_progress_label, widgets.progress_bar);
+        let playback_widget = PlaybackWidget::new(
+            widgets.time_progress_label,
+            widgets.progress_bar,
+            widgets.status_bar,
+        );
 
         Media {
             audio_location: None,
@@ -154,7 +192,7 @@ impl Media {
 
         self.record_button.set_sensitive(true);
 
-        self.playback_widget.update();
+        self.playback_widget.update_playback();
     }
 
     pub fn play_at(&mut self, output_device: Device, pos_secs: usize) {
@@ -211,7 +249,7 @@ impl Media {
             prev_button.set_sensitive(false);
 
             playback_widgets_clone.set_current(new_pos_secs);
-            playback_widgets_clone.update();
+            playback_widgets_clone.update_playback();
 
             let total_secs = playback_widgets_clone.progress_bar.adjustment().upper() as usize;
 
@@ -219,7 +257,7 @@ impl Media {
                 open_menu_item.set_sensitive(true);
 
                 playback_widgets_clone.set_current(total_secs as usize);
-                playback_widgets_clone.update();
+                playback_widgets_clone.update_playback();
 
                 play_button.set_label("Play");
                 record_button.set_sensitive(true);
@@ -258,7 +296,7 @@ impl Media {
         }
 
         self.playback_widget.set_current(pos_secs);
-        self.playback_widget.update();
+        self.playback_widget.update_playback();
 
         self.play_button.set_label("Play");
     }
@@ -319,7 +357,7 @@ impl Media {
 
             playback_widgets_clone.set_current(new_pos_secs);
             playback_widgets_clone.set_total(new_pos_secs);
-            playback_widgets_clone.update();
+            playback_widgets_clone.update_recording();
 
             glib::Continue(true)
         });
@@ -344,8 +382,32 @@ impl Media {
         self.next_button.set_sensitive(self.nav_button_state.0);
         self.prev_button.set_sensitive(self.nav_button_state.1);
 
+        let current_pos = self.playback_widget.current();
+        let total_pos = self.playback_widget.total();
+
+        // Inform about recording completion via Statusbar.
+        if current_pos != 0 && current_pos + 1 == total_pos {
+            let notification_pos = self
+                .playback_widget
+                .notify_recording_complete(self.audio_location.as_ref().unwrap().to_str().unwrap());
+
+            let (tx, rx) = MainContext::channel(glib::PRIORITY_DEFAULT);
+            thread::spawn(move || {
+                thread::sleep(Duration::from_secs(3));
+                if tx.send(notification_pos).is_err() {
+                    return;
+                }
+            });
+
+            let playback_widgets_clone = self.playback_widget.clone();
+            rx.attach(None, move |notification_pos| {
+                playback_widgets_clone.clear_notification(notification_pos);
+                glib::Continue(false)
+            });
+        }
+
         self.playback_widget.set_current(0);
-        self.playback_widget.update();
+        self.playback_widget.update_playback();
     }
 }
 
