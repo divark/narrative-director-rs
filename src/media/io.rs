@@ -402,6 +402,10 @@ impl Media {
                 playback_widgets_clone.clear_notification(notification_pos);
                 glib::Continue(false)
             });
+
+            // WORKAROUND: When finished recording, the total time
+            // is always off by one. Hence, this is in place for now.
+            self.playback_widget.set_total(total_pos + 1);
         }
 
         self.playback_widget.set_current(0);
