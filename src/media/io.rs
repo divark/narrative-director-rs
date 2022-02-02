@@ -27,10 +27,10 @@ struct PlaybackWidget {
     status_bar: gtk::Statusbar,
 }
 
-/// Converts ms to hours:minutes:seconds format
+/// Converts seconds to hours:minutes:seconds format
 fn to_hh_mm_ss_str(secs: usize) -> String {
-    let seconds = secs;
-    let minutes = seconds / 60;
+    let seconds = secs % 60;
+    let minutes = (seconds / 60) % 60;
     let hours = minutes / 60;
 
     format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
@@ -393,10 +393,8 @@ impl Media {
 
             let (tx, rx) = MainContext::channel(glib::PRIORITY_DEFAULT);
             thread::spawn(move || {
-                thread::sleep(Duration::from_secs(3));
-                if tx.send(notification_pos).is_err() {
-                    return;
-                }
+                thread::sleep(Duration::from_secs(5));
+                let _send_status = tx.send(notification_pos);
             });
 
             let playback_widgets_clone = self.playback_widget.clone();
