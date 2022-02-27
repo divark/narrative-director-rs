@@ -3,13 +3,12 @@
 // when the application runs on Windows.
 #![windows_subsystem = "windows"]
 
+use gtk::builders::RecentChooserMenuBuilder;
 use gtk::prelude::*;
 use gtk::{
     Builder, Button, ComboBoxText, Dialog, EventBox, FileChooser, Inhibit, Label, MenuItem,
-    RecentFilter, RecentManager, ResponseType, Scrollbar, Statusbar,
-    TextView, Window,
+    RecentFilter, RecentManager, ResponseType, Scrollbar, Statusbar, TextView, Window,
 };
-use gtk::builders::{RecentChooserMenuBuilder};
 use relm::{connect, Relm, Update, Widget};
 use relm_derive::Msg;
 use std::path::PathBuf;

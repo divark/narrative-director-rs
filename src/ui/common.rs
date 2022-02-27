@@ -3,11 +3,11 @@ use gtk::prelude::*;
 use std::path::PathBuf;
 
 use gtk::{
-    ComboBoxText, Dialog, DialogFlags, FileChooser, FileFilter, License,
-    ResponseType, SpinButton, Window,
+    ComboBoxText, Dialog, DialogFlags, FileChooser, FileFilter, License, ResponseType, SpinButton,
+    Window,
 };
 
-use gtk::builders::{AboutDialogBuilder};
+use gtk::builders::AboutDialogBuilder;
 
 use gtk::gdk_pixbuf::Pixbuf;
 
