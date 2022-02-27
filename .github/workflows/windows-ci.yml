@@ -47,6 +47,14 @@ jobs:
           ref: ${{ env.gvsbuildref }}
           path: gvsbuild
 
+      - name: Set up Python
+        uses: actions/setup-python@v2.2.2
+        with:
+          python-version: '3.10'
+
+      - name: Install visual studio tools
+        run: choco install visualstudio2019-workload-vctools
+
       # Temporarily move the preinstalled git, it causes errors related to cygwin.
       - name: (GTK binaries) move git binary
         if: steps.cache.outputs.cache-hit != 'true'
