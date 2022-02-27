@@ -3,7 +3,7 @@ use std::io::BufWriter;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use glib::{source_remove, MainContext, SourceId};
+use glib::{MainContext, SourceId};
 use std::thread;
 use std::time::Duration;
 
@@ -369,7 +369,7 @@ impl Media {
     /// back to normal.
     pub fn stop(&mut self) {
         if let Some(source) = self.stream_updater.take() {
-            source_remove(source);
+            source.remove();
         }
 
         self.open_menu_item.set_sensitive(true);
@@ -393,7 +393,7 @@ impl Media {
 
             let (tx, rx) = MainContext::channel(glib::PRIORITY_DEFAULT);
             thread::spawn(move || {
-                thread::sleep(Duration::from_secs(5));
+                thread::sleep(Duration::from_secs(10));
                 let _send_status = tx.send(notification_pos);
             });
 
