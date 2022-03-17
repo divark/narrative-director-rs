@@ -451,10 +451,16 @@ impl AudioOutput {
                 } else {
                     false
                 }
-            })
-            .expect("Could not find output device.");
+            });
 
-        output_device
+        // WORKAROUND: Use the default output device if the one we asked for
+        // wasn't found.
+        if output_device.is_none() {
+            return host.default_output_device()
+                .expect("No default output device backup found. PANIC!");
+        }
+
+        output_device.expect("Unable to retrieve found output device.")
     }
 }
 
@@ -585,10 +591,16 @@ impl AudioInput {
                 } else {
                     false
                 }
-            })
-            .expect("Could not find output device.");
+            });
 
-        input_device
+        // WORKAROUND: Use the default input device if the one we asked for
+        // wasn't found.
+        if input_device.is_none() {
+            return host.default_input_device()
+                .expect("No default input device backup found. PANIC!");
+        }
+
+        input_device.expect("Unable to retrieve found input device.")
     }
 
     pub fn config(&self) -> SupportedStreamConfig {
