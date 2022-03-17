@@ -456,7 +456,8 @@ impl AudioOutput {
         // WORKAROUND: Use the default output device if the one we asked for
         // wasn't found.
         if output_device.is_none() {
-            return host.default_output_device()
+            return host
+                .default_output_device()
                 .expect("No default output device backup found. PANIC!");
         }
 
@@ -596,7 +597,8 @@ impl AudioInput {
         // WORKAROUND: Use the default input device if the one we asked for
         // wasn't found.
         if input_device.is_none() {
-            return host.default_input_device()
+            return host
+                .default_input_device()
                 .expect("No default input device backup found. PANIC!");
         }
 
