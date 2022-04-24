@@ -343,7 +343,7 @@ impl Widget for Win {
         let paragraph_viewer = ParagraphViewer::new(viewer_widgets);
 
         // Media Controller setup
-        let media_widgets = MediaWidgets {
+        let ui_widgets = MainUIWidgets {
             open_menu_item,
 
             play_button,
@@ -352,13 +352,15 @@ impl Widget for Win {
 
             prev_button,
             next_button,
+        };
 
+        let media_widgets = MediaTrackingWidgets {
             progress_bar,
             time_progress_label: audio_progress_label,
             status_bar,
         };
 
-        let media_controller = Media::new(media_widgets);
+        let media_controller = Media::new(ui_widgets, media_widgets);
 
         // Preference Widgets Setup
         let preferences_dialog: Dialog = builder.object("preferences_dialog").unwrap();

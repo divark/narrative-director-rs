@@ -1,6 +1,6 @@
 # Narrative Director (Rust Edition)
 
-![Application Icon](resources/images/icon.svg)
+![Application Icon](resources/images/icon.png)
 
 Credit goes to [ColorfulSkyWisps](https://linktr.ee/ColorfulSkyWisps) for the creation of this logo. All rights reserved.
 
