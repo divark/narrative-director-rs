@@ -2,8 +2,6 @@
 
 ![Application Icon](resources/images/icon.png)
 
-Credit goes to [ColorfulSkyWisps](https://linktr.ee/ColorfulSkyWisps) for the creation of this logo. All rights reserved.
-
 ## Summary
 Narrative Director is an alternative Audio/Video Recording application tailored for working on medium to large-sized projects.
 This tool aspires to keep editing to a minimum with the capability of playing, recording and re-recording readings in place at
@@ -39,5 +37,3 @@ addition to having an excuse to learn about [Rust](https://www.rust-lang.org/) a
 
 ## License
 Narrative Director's code is distributed under the GPLv3 License, which can be viewed [here.](COPYING)
-
-The icon is made by [ColorfulSkyWisps](https://linktr.ee/ColorfulSkyWisps), all rights reserved.
