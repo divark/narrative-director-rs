@@ -28,12 +28,6 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: check
-
-      - name: Install Clippy
-        run: rustup component add clippy
-
-      - name: Run Clippy
-        run: cargo clippy --all-targets -- -D warnings -A unknown-lints
           
       - name: Run Tests
         uses: actions-rs/cargo@v1
