@@ -5,15 +5,9 @@ use std::io::Read;
 use std::path::PathBuf;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-pub struct Font {
-    size: u32,
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Session {
     paragraph_num: usize,
     project_directory: PathBuf,
-    font: Font,
 
     audio_input: AudioInput,
     audio_output: AudioOutput,
@@ -65,7 +59,6 @@ impl Session {
         Session {
             paragraph_num: 0,
             project_directory,
-            font: Font { size: 12 },
 
             audio_input: AudioInput::new(),
             audio_output: AudioOutput::new(),

@@ -57,6 +57,10 @@ pub fn open(parent_window: &Window) -> Option<PathBuf> {
 ///                representing the total number of paragraphs in ParagraphViewer.
 /// Postconditions: The paragraph number represented as a usize.
 pub fn go_to(parent_window: &Window, num_paragraphs: usize) -> Option<usize> {
+    if num_paragraphs == 0 {
+        return None;
+    }
+
     let goto_dialog = Dialog::with_buttons(
         Some("Select the paragraph number."),
         Some(parent_window),
