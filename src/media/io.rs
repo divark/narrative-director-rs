@@ -198,10 +198,10 @@ fn attach_progress_tracking(
                 }
             }
             SenderMessages::Pause(pause_pos_secs) => {
-                if widgets.play_button.label().unwrap() == "Pause" {
-                    playback_widget.set_current(pause_pos_secs);
-                    playback_widget.update_playback();
+                playback_widget.set_current(pause_pos_secs);
+                playback_widget.update_playback();
 
+                if widgets.play_button.label().unwrap() == "Pause" {
                     widgets.play_button.set_label("Play");
                     return glib::Continue(false);
                 }
