@@ -25,6 +25,7 @@ use text::viewer::{ParagraphViewer, ViewerWidgets};
 
 mod ui;
 use ui::common::*;
+use ui::app::*;
 
 pub struct Model {
     current_session: Option<Session>,
@@ -409,5 +410,8 @@ impl Widget for Win {
 
 /// Spawns the application with a Graphical User Interface.
 fn main() {
-    Win::run(()).unwrap();
+    let application = create_main_application();
+
+    application.app.run().unwrap();
+    //Win::run(()).unwrap();
 }
