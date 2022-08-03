@@ -1,5 +1,10 @@
-use fltk::{app::{App, self}, prelude::*, window::Window, menu, enums::{FrameType, Shortcut}};
-
+use fltk::{
+    app::{self, App},
+    enums::{FrameType, Shortcut},
+    menu,
+    prelude::*,
+    window::Window,
+};
 
 #[derive(Copy, Clone)]
 pub enum UIActions {
@@ -92,7 +97,6 @@ pub fn create_main_application() -> MainApplication {
 
     let menu_bar = create_menu_bar(&broadcaster);
 
-    
     // 2: Modify UI Properties
     main_window.make_resizable(true);
     main_window.end();
@@ -101,8 +105,8 @@ pub fn create_main_application() -> MainApplication {
     MainApplication {
         app,
         ui_action_receiver: receiver,
-        
+
         main_window,
-        menu_bar
+        menu_bar,
     }
 }

@@ -24,8 +24,8 @@ mod text;
 use text::viewer::{ParagraphViewer, ViewerWidgets};
 
 mod ui;
-use ui::common::*;
 use ui::app::*;
+use ui::common::*;
 
 pub struct Model {
     current_session: Option<Session>,
