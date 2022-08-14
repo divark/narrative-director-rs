@@ -1,9 +1,14 @@
 use fltk::{
     app::{self, App},
-    enums::{FrameType, Shortcut, self, Align},
+    button::Button,
+    enums::{self, Align, FrameType, Shortcut},
+    frame::{self, Frame},
+    group::{self, Flex, Pack, PackType},
     menu,
     prelude::*,
-    window::{Window, DoubleWindow}, group::{self, Flex, Pack, PackType}, text::{TextDisplay, self}, frame::{self, Frame}, button::Button, valuator::{Scrollbar, ScrollbarType},
+    text::{self, TextDisplay},
+    valuator::{Scrollbar, ScrollbarType},
+    window::{DoubleWindow, Window},
 };
 
 #[derive(Copy, Clone)]
@@ -121,9 +126,7 @@ fn create_widget_layout(main_window: &Window) {
     flex_column_layout.set_type(group::FlexType::Column);
 
     // Paragraph Counter widget
-    let mut counter_text = Frame::default()
-        .with_label("0/0")
-        .with_align(Align::Center);
+    let mut counter_text = Frame::default().with_label("0/0").with_align(Align::Center);
 
     flex_column_layout.set_size(&counter_text, counter_text.label_size());
 
@@ -138,8 +141,7 @@ fn create_widget_layout(main_window: &Window) {
     flex_column_layout.set_size(&progress_bar, 30);
 
     let mut navigation_pack = Flex::default_fill().with_type(group::FlexType::Row);
-    let previous_button = Button::default()
-        .with_label("<");
+    let previous_button = Button::default().with_label("<");
     let audio_progress_text = Frame::default()
         .with_label("00:00:00/00:00:00")
         .with_align(Align::Center);
@@ -149,12 +151,9 @@ fn create_widget_layout(main_window: &Window) {
 
     // Playback Widgets
     let mut playback_pack = Flex::default_fill().with_type(group::FlexType::Row);
-    let stop_button = Button::default()
-        .with_label("Stop");
-    let record_button = Button::default()
-        .with_label("Record");
-    let play_pause_button = Button::default()
-        .with_label("Play");
+    let stop_button = Button::default().with_label("Stop");
+    let record_button = Button::default().with_label("Record");
+    let play_pause_button = Button::default().with_label("Play");
     playback_pack.end();
     flex_column_layout.set_size(&playback_pack, 30);
 
