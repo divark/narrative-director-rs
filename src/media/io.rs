@@ -647,11 +647,18 @@ impl AudioInput {
     pub fn config(&self) -> SupportedStreamConfig {
         let input_device = self.to_device();
 
+        let desired_sample_rate = SampleRate(self.sample_rate);
+
         input_device
             .supported_input_configs()
-            .unwrap()
-            .find(|config| config.channels() == self.channels)
-            .expect("Could not find a device config with given sample rate and channels.")
+            .expect("No input configs found. No inputs in general?")
+            .filter(|config| {
+                config.channels() == self.channels
+                    && desired_sample_rate >= config.min_sample_rate()
+                    && desired_sample_rate <= config.max_sample_rate()
+            })
+            .nth(0)
+            .expect("Could not find a config with the desired channel and sample rate")
             .with_sample_rate(SampleRate(self.sample_rate))
     }
 }
