@@ -3,6 +3,7 @@ use std::io::BufWriter;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
 
+use fltk::app;
 use fltk::frame::Frame;
 use fltk::prelude::{ValuatorExt, WidgetExt};
 use fltk::text::TextDisplay;
@@ -254,6 +255,7 @@ fn attach_progress_tracking(
                     break;
                 }
             }
+            app::awake();
         }
     });
 }
