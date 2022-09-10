@@ -1,9 +1,12 @@
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
-use std::rc::Rc;
+use std::sync::mpsc::{Receiver, Sender, self};
 
-use glib::{MainContext, Receiver};
+use fltk::frame::Frame;
+use fltk::prelude::{ValuatorExt, WidgetExt};
+use fltk::text::TextDisplay;
+use fltk::valuator::HorNiceSlider;
 use std::thread;
 use std::time::Duration;
 
@@ -17,14 +20,13 @@ use serde::{Deserialize, Serialize};
 
 use anyhow::{bail, Result};
 
-use gtk::prelude::*;
-use gtk::Adjustment;
+use crate::ui::app::{MainUIWidgets, MediaTrackingWidgets};
 
 #[derive(Clone)]
 struct PlaybackWidget {
-    time_label: gtk::Label,
-    progress_bar: gtk::Scrollbar,
-    status_bar: gtk::Statusbar,
+    time_label: Frame,
+    progress_bar: HorNiceSlider,
+    status_bar: TextDisplay,
 }
 
 /// Converts seconds to hours:minutes:seconds format
@@ -38,12 +40,10 @@ fn to_hh_mm_ss_str(secs: usize) -> String {
 
 impl PlaybackWidget {
     pub fn new(
-        time_label: gtk::Label,
-        progress_bar: gtk::Scrollbar,
-        status_bar: gtk::Statusbar,
+        time_label: Frame,
+        progress_bar: HorNiceSlider,
+        status_bar: TextDisplay,
     ) -> PlaybackWidget {
-        progress_bar.set_adjustment(&Adjustment::new(0.0, 0.0, 0.0, 1.0, 1.0, 1.0));
-
         PlaybackWidget {
             time_label,
             progress_bar,
@@ -60,16 +60,16 @@ impl PlaybackWidget {
     }
 
     pub fn set_total(&mut self, total_secs: usize) {
-        self.progress_bar.adjustment().set_upper(total_secs as f64);
+        self.progress_bar.set_bounds(0.0, total_secs as f64);
     }
 
     pub fn total(&self) -> usize {
-        self.progress_bar.adjustment().upper() as usize
+        self.progress_bar.maximum() as usize
     }
 
     pub fn update_playback(&mut self) {
         let current_pos = self.progress_bar.value() as usize;
-        let mut total = self.progress_bar.adjustment().upper() as usize;
+        let mut total = self.progress_bar.maximum() as usize;
         if total == 0 {
             total = 1;
         }
@@ -80,55 +80,35 @@ impl PlaybackWidget {
             to_hh_mm_ss_str(total - 1)
         );
 
-        self.time_label.set_text(&playback_time);
+        self.time_label.set_label(&playback_time);
     }
 
     pub fn update_recording(&mut self) {
-        let total = self.progress_bar.adjustment().upper() as usize;
+        let total = self.progress_bar.maximum() as usize;
         self.set_current(total);
 
         let playback_time = format!("{}/{}", to_hh_mm_ss_str(total), to_hh_mm_ss_str(total));
 
-        self.time_label.set_text(&playback_time);
+        self.time_label.set_label(&playback_time);
     }
 
     pub fn reset(&mut self) {
-        self.progress_bar
-            .set_adjustment(&Adjustment::new(0.0, 0.0, 0.0, 1.0, 1.0, 1.0));
+        self.progress_bar.set_bounds(0.0, 0.0);
     }
 
-    pub fn notify_recording_complete(&self, filepath: &str) -> u32 {
-        let context_id = self.status_bar.context_id("Playback notification.");
+    pub fn notify_recording_complete(&mut self, filepath: &str) {
         self.status_bar
-            .push(context_id, &format!("Recording complete: {}", filepath))
+            .set_label(&format!("Recording complete: {}", filepath));
     }
 
-    pub fn clear_notification(&self, notification_pos: u32) {
-        let context_id = self.status_bar.context_id("Playback notification.");
-        StatusbarExt::remove(&self.status_bar, context_id, notification_pos);
+    pub fn clear_notification(&mut self) {
+        self.status_bar.set_label("");
     }
-}
-
-pub struct MediaTrackingWidgets {
-    pub progress_bar: gtk::Scrollbar,
-    pub time_progress_label: gtk::Label,
-    pub status_bar: gtk::Statusbar,
-}
-
-#[derive(Clone)]
-pub struct MainUIWidgets {
-    pub open_menu_item: gtk::MenuItem,
-    pub play_button: gtk::Button,
-    pub stop_button: gtk::Button,
-    pub record_button: gtk::Button,
-
-    pub next_button: Rc<gtk::Button>,
-    pub prev_button: Rc<gtk::Button>,
 }
 
 pub struct Media {
     audio_location: Option<PathBuf>,
-    stream_updater: Option<glib::Sender<SenderMessages>>,
+    stream_updater: Option<Sender<SenderMessages>>,
 
     nav_button_state: (bool, bool),
 
@@ -154,119 +134,127 @@ enum SenderMessages {
 fn attach_progress_tracking(
     rx: Receiver<SenderMessages>,
     mut playback_widget: PlaybackWidget,
-    widgets: MainUIWidgets,
+    mut widgets: MainUIWidgets,
 ) {
-    rx.attach(None, move |sender_msg| {
-        match sender_msg {
-            SenderMessages::Clear => {
-                playback_widget.reset();
-
-                widgets.play_button.set_sensitive(false);
-                widgets.stop_button.set_sensitive(false);
-
-                widgets.record_button.set_sensitive(true);
-
-                playback_widget.update_playback();
-            }
-            SenderMessages::Load(length) => {
-                playback_widget.set_current(0);
-                playback_widget.set_total(length);
-
-                widgets.play_button.set_sensitive(true);
-                widgets.stop_button.set_sensitive(false);
-
-                widgets.record_button.set_sensitive(true);
-
-                playback_widget.update_playback();
-            }
-            SenderMessages::Play => {
-                widgets.open_menu_item.set_sensitive(false);
-
-                widgets.play_button.set_label("Pause");
-                widgets.record_button.set_sensitive(false);
-                widgets.stop_button.set_sensitive(true);
-
-                widgets.next_button.set_sensitive(false);
-                widgets.prev_button.set_sensitive(false);
-            }
-            SenderMessages::Playing(current_pos_secs) => {
-                if widgets.play_button.is_sensitive()
-                    && widgets.play_button.label().unwrap() == "Pause"
-                {
-                    playback_widget.set_current(current_pos_secs);
+    thread::spawn(move || {
+        while let Ok(sender_msg) = rx.recv() {
+            match sender_msg {
+                SenderMessages::Clear => {
+                    playback_widget.reset();
+    
+                    widgets.play_button.deactivate();
+                    widgets.stop_button.deactivate();
+    
+                    widgets.record_button.activate();
+    
                     playback_widget.update_playback();
                 }
-            }
-            SenderMessages::Pause(pause_pos_secs) => {
-                playback_widget.set_current(pause_pos_secs);
-                playback_widget.update_playback();
-
-                if widgets.play_button.label().unwrap() == "Pause" {
+                SenderMessages::Load(length) => {
+                    playback_widget.set_current(0);
+                    playback_widget.set_total(length);
+    
+                    widgets.play_button.activate();
+                    widgets.stop_button.deactivate();
+    
+                    widgets.record_button.activate();
+    
+                    playback_widget.update_playback();
+                }
+                SenderMessages::Play => {
+                    widgets.open_menu_item.deactivate();
+    
+                    widgets.play_button.set_label("Pause");
+                    widgets.record_button.deactivate();
+                    widgets.stop_button.activate();
+    
+                    widgets.next_button.get_mut().deactivate();
+                    widgets.prev_button.get_mut().deactivate();
+                }
+                SenderMessages::Playing(current_pos_secs) => {
+                    if widgets.play_button.active() && widgets.play_button.label() == "Pause" {
+                        playback_widget.set_current(current_pos_secs);
+                        playback_widget.update_playback();
+                    }
+                }
+                SenderMessages::Pause(pause_pos_secs) => {
+                    playback_widget.set_current(pause_pos_secs);
+                    playback_widget.update_playback();
+    
+                    if widgets.play_button.label() == "Pause" {
+                        widgets.play_button.set_label("Play");
+                        break;
+                    }
+                }
+                SenderMessages::Record => {
+                    widgets.open_menu_item.deactivate();
+    
+                    widgets.play_button.deactivate();
+                    widgets.record_button.deactivate();
+                    widgets.stop_button.activate();
+    
+                    widgets.next_button.get_mut().deactivate();
+                    widgets.prev_button.get_mut().deactivate();
+                }
+                SenderMessages::Recording(current_pos_secs) => {
+                    if !widgets.record_button.active() {
+                        playback_widget.set_current(current_pos_secs);
+                        playback_widget.set_total(current_pos_secs);
+                        playback_widget.update_recording();
+                    }
+                }
+                SenderMessages::Stop(recording_name) => {
+                    widgets.open_menu_item.activate();
+    
+                    let was_recording = !widgets.play_button.active();
                     widgets.play_button.set_label("Play");
-                    return glib::Continue(false);
-                }
-            }
-            SenderMessages::Record => {
-                widgets.open_menu_item.set_sensitive(false);
-
-                widgets.play_button.set_sensitive(false);
-                widgets.record_button.set_sensitive(false);
-                widgets.stop_button.set_sensitive(true);
-
-                widgets.next_button.set_sensitive(false);
-                widgets.prev_button.set_sensitive(false);
-            }
-            SenderMessages::Recording(current_pos_secs) => {
-                if !widgets.record_button.is_sensitive() {
-                    playback_widget.set_current(current_pos_secs);
-                    playback_widget.set_total(current_pos_secs);
-                    playback_widget.update_recording();
-                }
-            }
-            SenderMessages::Stop(recording_name) => {
-                widgets.open_menu_item.set_sensitive(true);
-
-                let was_recording = !widgets.play_button.get_sensitive();
-                widgets.play_button.set_label("Play");
-                widgets.play_button.set_sensitive(true);
-                widgets.record_button.set_sensitive(true);
-                widgets.stop_button.set_sensitive(false);
-
-                let total_pos = playback_widget.total();
-
-                // Inform about recording completion via Statusbar.
-                if was_recording {
-                    let notification_pos =
+                    widgets.play_button.activate();
+                    widgets.record_button.activate();
+                    widgets.stop_button.deactivate();
+    
+                    let total_pos = playback_widget.total();
+    
+                    // Inform about recording completion via Statusbar.
+                    if was_recording {
                         playback_widget.notify_recording_complete(recording_name.to_str().unwrap());
-
-                    let (tx, rx) = MainContext::channel(glib::PRIORITY_DEFAULT);
-                    thread::spawn(move || {
-                        thread::sleep(Duration::from_secs(10));
-                        let _send_status = tx.send(notification_pos);
-                    });
-
-                    let playback_widgets_clone = playback_widget.clone();
-                    rx.attach(None, move |notification_pos| {
-                        playback_widgets_clone.clear_notification(notification_pos);
-                        glib::Continue(false)
-                    });
-
-                    // WORKAROUND: When finished recording, the total time
-                    // is always off by one. Hence, this is in place for now.
-                    playback_widget.set_total(total_pos + 1);
+    
+                        let (tx, rx) = mpsc::channel();
+                        thread::spawn(move || {
+                            thread::sleep(Duration::from_secs(10));
+                            let _send_status = tx.send(0);
+                        });
+    
+                        let mut playback_widgets_clone = playback_widget.clone();
+                        thread::spawn(move || {
+                            if rx.recv().is_ok() {
+                                playback_widgets_clone.clear_notification();
+                            }
+                        });
+    
+                        // WORKAROUND: When finished recording, the total time
+                        // is always off by one. Hence, this is in place for now.
+                        playback_widget.set_total(total_pos + 1);
+                    }
+    
+                    playback_widget.set_current(0);
+                    playback_widget.update_playback();
                 }
-
-                playback_widget.set_current(0);
-                playback_widget.update_playback();
-            }
-            SenderMessages::ResetNavButtons(next_btn_sensitivity, prev_btn_sensitivity) => {
-                widgets.next_button.set_sensitive(next_btn_sensitivity);
-                widgets.prev_button.set_sensitive(prev_btn_sensitivity);
-                return glib::Continue(false);
+                SenderMessages::ResetNavButtons(next_btn_sensitivity, prev_btn_sensitivity) => {
+                    if next_btn_sensitivity {
+                        widgets.next_button.get_mut().activate();
+                    } else {
+                        widgets.next_button.get_mut().deactivate();
+                    }
+    
+                    if prev_btn_sensitivity {
+                        widgets.prev_button.get_mut().activate();
+                    } else {
+                        widgets.prev_button.get_mut().deactivate();
+                    }
+    
+                    break;
+                }
             }
         }
-
-        glib::Continue(true)
     });
 }
 
@@ -296,7 +284,7 @@ impl Media {
             .default_output_device()
             .expect("Unable to get default output device.");
 
-        let (tx, rx) = MainContext::channel(glib::PRIORITY_DEFAULT);
+        let (tx, rx) = mpsc::channel();
         attach_progress_tracking(
             rx,
             self.playback_updater_widget.clone(),
@@ -309,8 +297,8 @@ impl Media {
                 tx.send(SenderMessages::Load(length))
                     .expect("Load: Could not load current audio file.");
                 self.nav_button_state = (
-                    self.main_ui_widgets.next_button.get_sensitive(),
-                    self.main_ui_widgets.prev_button.get_sensitive(),
+                    self.main_ui_widgets.next_button.get_mut().active(),
+                    self.main_ui_widgets.prev_button.get_mut().active(),
                 );
             }
             Err(_) => {
@@ -323,12 +311,12 @@ impl Media {
     pub fn play(&mut self, output_device: Device) {
         let mut current_pos_secs = self.playback_updater_widget.current();
 
-        if self.main_ui_widgets.play_button.label().unwrap() == "Pause" {
+        if self.main_ui_widgets.play_button.label() == "Pause" {
             self.pause_at(current_pos_secs);
             return;
         }
 
-        let (sender, rx) = MainContext::channel(glib::PRIORITY_DEFAULT);
+        let (sender, rx) = mpsc::channel();
         attach_progress_tracking(
             rx,
             self.playback_updater_widget.clone(),
@@ -380,7 +368,7 @@ impl Media {
 
     pub fn pause_at(&mut self, current_pos_secs: usize) {
         let sender = self.stream_updater.take().unwrap_or_else(|| {
-            let (sender, rx) = MainContext::channel(glib::PRIORITY_DEFAULT);
+            let (sender, rx) = mpsc::channel();
             attach_progress_tracking(
                 rx,
                 self.playback_updater_widget.clone(),
@@ -399,7 +387,7 @@ impl Media {
     }
 
     pub fn record(&mut self, input_device: &AudioInput) {
-        let (sender, rx) = MainContext::channel(glib::PRIORITY_DEFAULT);
+        let (sender, rx) = mpsc::channel();
         attach_progress_tracking(
             rx,
             self.playback_updater_widget.clone(),
@@ -441,7 +429,7 @@ impl Media {
     /// back to normal.
     pub fn stop(&mut self) {
         let sender = self.stream_updater.take().unwrap_or_else(|| {
-            let (sender, rx) = MainContext::channel(glib::PRIORITY_DEFAULT);
+            let (sender, rx) = mpsc::channel();
             attach_progress_tracking(
                 rx,
                 self.playback_updater_widget.clone(),

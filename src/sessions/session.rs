@@ -1,8 +1,9 @@
-use crate::{AudioInput, AudioOutput};
 use serde::{Deserialize, Serialize};
 use std::fs::{write, DirBuilder, File};
 use std::io::Read;
 use std::path::PathBuf;
+
+use crate::media::io::{AudioInput, AudioOutput};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Session {
