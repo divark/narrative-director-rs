@@ -8,7 +8,7 @@
 // /// Preconditions: parent_window is a Window reference.
 // /// Postconditions: A File wrapped in Some, or None.
 // pub fn open() -> Option<PathBuf> {
-    
+
 // }
 
 // /// Returns the paragraph number chosen by a user in a Dialog, or None if

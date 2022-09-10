@@ -1,19 +1,20 @@
-use std::{path::PathBuf, cell::RefCell};
+use std::{cell::RefCell, path::PathBuf};
 
 use fltk::{
     app::{self, App},
     button::Button,
+    dialog,
     enums::{Align, FrameType, Shortcut},
     frame::Frame,
     group::{self, Flex},
     menu::{self, MenuItem, SysMenuBar},
     prelude::*,
     text::{self, TextBuffer, TextDisplay},
-    valuator::{HorNiceSlider},
-    window::Window, dialog,
+    valuator::HorNiceSlider,
+    window::Window,
 };
 
-use crate::{text::viewer::ParagraphViewer, sessions::session::Session, media::io::Media};
+use crate::{media::io::Media, sessions::session::Session, text::viewer::ParagraphViewer};
 
 #[derive(Copy, Clone)]
 pub enum UIActions {
@@ -129,10 +130,9 @@ impl MainApplication {
             .as_ref()
             .expect("A session must exist if Next messages can be processed.");
 
-        let audio_file_location = current_session.project_directory().join(format!(
-            "part{}.wav",
-            self.paragraph_viewer.paragraph_num()
-        ));
+        let audio_file_location = current_session
+            .project_directory()
+            .join(format!("part{}.wav", self.paragraph_viewer.paragraph_num()));
 
         self.media_io.load(audio_file_location);
     }
@@ -143,12 +143,11 @@ impl MainApplication {
             session.save();
         }
 
-        let session =
-            Session::load(file_location.clone()).unwrap_or_else(|| Session::new(file_location.clone()));
+        let session = Session::load(file_location.clone())
+            .unwrap_or_else(|| Session::new(file_location.clone()));
 
         self.paragraph_viewer.load_paragraphs(file_location);
-        self
-            .paragraph_viewer
+        self.paragraph_viewer
             .show_paragraph_at(session.paragraph_num());
 
         self.session = Some(session);
@@ -161,29 +160,31 @@ impl MainApplication {
                     UIActions::Next => {
                         self.paragraph_viewer.show_next_paragraph();
                         self.load_audio_file();
-                    },
+                    }
                     UIActions::Previous => {
                         self.paragraph_viewer.show_previous_paragraph();
                         self.load_audio_file();
-                    },
+                    }
                     UIActions::Play => {
-                        let output_device = self.session
+                        let output_device = self
+                            .session
                             .as_ref()
                             .expect("Session should exist on playback.")
                             .audio_output()
                             .to_device();
-                        
+
                         self.media_io.play(output_device);
-                    },
+                    }
                     UIActions::Stop => self.media_io.stop(),
                     UIActions::Record => {
-                        let input_device = self.session
+                        let input_device = self
+                            .session
                             .as_ref()
                             .expect("Session should exist on Recording")
                             .audio_input();
-                        
+
                         self.media_io.record(input_device);
-                    },
+                    }
                     UIActions::AudioSkip(pos_secs) => self.media_io.pause_at(pos_secs),
                     UIActions::GoTo => todo!(),
                     UIActions::LoadFile => {
@@ -191,7 +192,7 @@ impl MainApplication {
                             self.load_text_file(file_path);
                             self.load_audio_file();
                         }
-                    },
+                    }
                     UIActions::OpenPreferences => todo!(),
                     UIActions::About => todo!(),
                     UIActions::Quit => break,

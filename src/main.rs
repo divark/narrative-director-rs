@@ -3,8 +3,8 @@
 // when the application runs on Windows.
 #![windows_subsystem = "windows"]
 
-mod text;
 mod media;
+mod text;
 
 mod ui;
 use ui::app::*;

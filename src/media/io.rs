@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
-use std::sync::mpsc::{Receiver, Sender, self};
+use std::sync::mpsc::{self, Receiver, Sender};
 
 use fltk::frame::Frame;
 use fltk::prelude::{ValuatorExt, WidgetExt};
@@ -141,32 +141,32 @@ fn attach_progress_tracking(
             match sender_msg {
                 SenderMessages::Clear => {
                     playback_widget.reset();
-    
+
                     widgets.play_button.deactivate();
                     widgets.stop_button.deactivate();
-    
+
                     widgets.record_button.activate();
-    
+
                     playback_widget.update_playback();
                 }
                 SenderMessages::Load(length) => {
                     playback_widget.set_current(0);
                     playback_widget.set_total(length);
-    
+
                     widgets.play_button.activate();
                     widgets.stop_button.deactivate();
-    
+
                     widgets.record_button.activate();
-    
+
                     playback_widget.update_playback();
                 }
                 SenderMessages::Play => {
                     widgets.open_menu_item.deactivate();
-    
+
                     widgets.play_button.set_label("Pause");
                     widgets.record_button.deactivate();
                     widgets.stop_button.activate();
-    
+
                     widgets.next_button.get_mut().deactivate();
                     widgets.prev_button.get_mut().deactivate();
                 }
@@ -179,7 +179,7 @@ fn attach_progress_tracking(
                 SenderMessages::Pause(pause_pos_secs) => {
                     playback_widget.set_current(pause_pos_secs);
                     playback_widget.update_playback();
-    
+
                     if widgets.play_button.label() == "Pause" {
                         widgets.play_button.set_label("Play");
                         break;
@@ -187,11 +187,11 @@ fn attach_progress_tracking(
                 }
                 SenderMessages::Record => {
                     widgets.open_menu_item.deactivate();
-    
+
                     widgets.play_button.deactivate();
                     widgets.record_button.deactivate();
                     widgets.stop_button.activate();
-    
+
                     widgets.next_button.get_mut().deactivate();
                     widgets.prev_button.get_mut().deactivate();
                 }
@@ -204,37 +204,37 @@ fn attach_progress_tracking(
                 }
                 SenderMessages::Stop(recording_name) => {
                     widgets.open_menu_item.activate();
-    
+
                     let was_recording = !widgets.play_button.active();
                     widgets.play_button.set_label("Play");
                     widgets.play_button.activate();
                     widgets.record_button.activate();
                     widgets.stop_button.deactivate();
-    
+
                     let total_pos = playback_widget.total();
-    
+
                     // Inform about recording completion via Statusbar.
                     if was_recording {
                         playback_widget.notify_recording_complete(recording_name.to_str().unwrap());
-    
+
                         let (tx, rx) = mpsc::channel();
                         thread::spawn(move || {
                             thread::sleep(Duration::from_secs(10));
                             let _send_status = tx.send(0);
                         });
-    
+
                         let mut playback_widgets_clone = playback_widget.clone();
                         thread::spawn(move || {
                             if rx.recv().is_ok() {
                                 playback_widgets_clone.clear_notification();
                             }
                         });
-    
+
                         // WORKAROUND: When finished recording, the total time
                         // is always off by one. Hence, this is in place for now.
                         playback_widget.set_total(total_pos + 1);
                     }
-    
+
                     playback_widget.set_current(0);
                     playback_widget.update_playback();
                 }
@@ -244,13 +244,13 @@ fn attach_progress_tracking(
                     } else {
                         widgets.next_button.get_mut().deactivate();
                     }
-    
+
                     if prev_btn_sensitivity {
                         widgets.prev_button.get_mut().activate();
                     } else {
                         widgets.prev_button.get_mut().deactivate();
                     }
-    
+
                     break;
                 }
             }
