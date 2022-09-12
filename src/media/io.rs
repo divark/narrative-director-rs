@@ -5,7 +5,7 @@ use std::sync::mpsc::{self, Receiver, Sender};
 
 use fltk::app;
 use fltk::frame::Frame;
-use fltk::prelude::{ValuatorExt, WidgetExt};
+use fltk::prelude::{DisplayExt, ValuatorExt, WidgetExt};
 use fltk::text::TextDisplay;
 use fltk::valuator::HorNiceSlider;
 use std::thread;
@@ -99,11 +99,13 @@ impl PlaybackWidget {
 
     pub fn notify_recording_complete(&mut self, filepath: &str) {
         self.status_bar
-            .set_label(&format!("Recording complete: {}", filepath));
+            .buffer()
+            .unwrap()
+            .set_text(&format!("Recording complete: {}", filepath));
     }
 
     pub fn clear_notification(&mut self) {
-        self.status_bar.set_label("");
+        self.status_bar.buffer().unwrap().set_text("");
     }
 }
 
@@ -228,6 +230,7 @@ fn attach_progress_tracking(
                         thread::spawn(move || {
                             if rx.recv().is_ok() {
                                 playback_widgets_clone.clear_notification();
+                                app::awake();
                             }
                         });
 
