@@ -32,7 +32,7 @@ pub enum UIActions {
     //LoadRecent(String),
     OpenPreferences,
 
-    About,    
+    About,
     Quit,
 }
 
@@ -204,7 +204,7 @@ impl MainApplication {
                         while about_dialog.shown() {
                             app::wait();
                         }
-                    },
+                    }
                     UIActions::Quit => break,
                 }
             }

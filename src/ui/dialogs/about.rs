@@ -1,7 +1,17 @@
-use fltk::{prelude::*, window::Window, group::{Flex, FlexType}, frame::Frame, enums::FrameType, image::PngImage, text::{TextDisplay, TextBuffer, WrapMode}};
+use fltk::{
+    enums::FrameType,
+    frame::Frame,
+    group::{Flex, FlexType},
+    image::PngImage,
+    prelude::*,
+    text::{TextBuffer, TextDisplay, WrapMode},
+    window::Window,
+};
 
 pub fn about_dialog() -> Window {
-	let about_window = Window::default().with_label("About Narrative Director").with_size(640, 360);
+    let about_window = Window::default()
+        .with_label("About Narrative Director")
+        .with_size(640, 360);
 
     let mut flex_column_layout = Flex::default_fill();
     flex_column_layout.set_type(FlexType::Column);
