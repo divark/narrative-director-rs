@@ -16,6 +16,8 @@ use fltk::{
 
 use crate::{media::io::Media, sessions::session::Session, text::viewer::ParagraphViewer};
 
+use super::dialogs::about::about_dialog;
+
 #[derive(Copy, Clone)]
 pub enum UIActions {
     Next,
@@ -29,7 +31,8 @@ pub enum UIActions {
     LoadFile,
     //LoadRecent(String),
     OpenPreferences,
-    About,
+
+    About,    
     Quit,
 }
 
@@ -194,7 +197,14 @@ impl MainApplication {
                         }
                     }
                     UIActions::OpenPreferences => todo!(),
-                    UIActions::About => todo!(),
+                    UIActions::About => {
+                        let mut about_dialog = about_dialog();
+
+                        about_dialog.show();
+                        while about_dialog.shown() {
+                            app::wait();
+                        }
+                    },
                     UIActions::Quit => break,
                 }
             }
