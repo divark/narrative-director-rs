@@ -177,244 +177,218 @@ impl ParagraphViewer {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use gtk::Builder;
-//     use std::io::Write;
-//     use tempfile::NamedTempFile;
+#[cfg(test)]
+mod tests {
+    use crate::ui::app::MainApplication;
 
-//     const FIRST_PARAGRAPH: &str = "This is the first paragraph. It will eventually contain four sentences. I'm serious! Okay, here is the last sentence.";
-//     const SECOND_PARAGRAPH: &str = "This is the second paragraph. It will also contain four sentences. This paragraph is similar to the first one. It really is?";
+    use super::*;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
 
-//     const MANY_PARAGRAPHS_LEN: usize = 2;
+    const FIRST_PARAGRAPH: &str = "This is the first paragraph. It will eventually contain four sentences. I'm serious! Okay, here is the last sentence.";
+    const SECOND_PARAGRAPH: &str = "This is the second paragraph. It will also contain four sentences. This paragraph is similar to the first one. It really is?";
 
-//     fn get_viewer_widgets() -> ViewerWidgets {
-//         gtk::init().expect("Unable to initialize gtk.");
+    const MANY_PARAGRAPHS_LEN: usize = 2;
 
-//         let glade_src = include_str!("../ui/main-window.glade");
-//         let builder = Builder::from_string(glade_src);
+    fn get_paragraph_viewer() -> ParagraphViewer {
+        let main_application = MainApplication::new();
 
-//         let paragraph_view: TextView = builder.object("chunk_view_txtviewer").unwrap();
+        main_application.paragraph_viewer
+    }
 
-//         let prev_button: Rc<Button> = Rc::new(builder.object("prev_chunk_btn").unwrap());
-//         let next_button: Rc<Button> = Rc::new(builder.object("next_chunk_btn").unwrap());
+    fn get_text_from_viewer(parapgraph_view: &TextDisplay) -> String {
+        let text_buffer = parapgraph_view
+            .buffer()
+            .expect("Could not fetch buffer from paragraph view.");
 
-//         let text_progress_counter: Label = builder.object("chunk_position_lbl").unwrap();
+        text_buffer.text()
+    }
 
-//         ViewerWidgets {
-//             paragraph_view,
-//             next_button,
-//             prev_button,
-//             progress_counter: text_progress_counter,
-//         }
-//     }
+    fn get_file_one_paragraph() -> NamedTempFile {
+        let mut paragraph_file = NamedTempFile::new().expect("Could not create temporary file.");
+        paragraph_file
+            .reopen()
+            .expect("Could not open temporary file for writing.");
+        paragraph_file
+            .write_all(FIRST_PARAGRAPH.as_bytes())
+            .expect("Could not write to temporary file.");
 
-//     fn get_paragraph_viewer() -> ParagraphViewer {
-//         let viewer_widgets = get_viewer_widgets();
+        paragraph_file
+    }
 
-//         ParagraphViewer::new(viewer_widgets)
-//     }
+    fn get_file_many_paragraphs() -> NamedTempFile {
+        let mut paragraphs = String::new();
+        paragraphs += FIRST_PARAGRAPH;
+        paragraphs += SECOND_PARAGRAPH;
 
-//     fn get_text_from_viewer(parapgraph_view: &TextView) -> String {
-//         let text_buffer = parapgraph_view
-//             .buffer()
-//             .expect("Could not fetch buffer from paragraph view.");
+        let mut paragraph_file = NamedTempFile::new().expect("Could not create temporary file.");
+        paragraph_file
+            .reopen()
+            .expect("Could not open temporary file for writing.");
+        paragraph_file
+            .write_all(paragraphs.as_bytes())
+            .expect("Could not write to temporary file.");
 
-//         let start_iter = text_buffer.start_iter();
-//         let end_iter = text_buffer.end_iter();
+        paragraph_file
+    }
 
-//         let text = text_buffer
-//             .text(&start_iter, &end_iter, false)
-//             .expect("Could not get text from paragraph view.");
-//         text.to_string()
-//     }
+    #[test]
+    fn goto_no_text() {
+        let mut paragraph_viewer = get_paragraph_viewer();
+        assert_eq!(0, paragraph_viewer.num_paragraphs());
 
-//     fn get_file_one_paragraph() -> NamedTempFile {
-//         let mut paragraph_file = NamedTempFile::new().expect("Could not create temporary file.");
-//         paragraph_file
-//             .reopen()
-//             .expect("Could not open temporary file for writing.");
-//         paragraph_file
-//             .write_all(FIRST_PARAGRAPH.as_bytes())
-//             .expect("Could not write to temporary file.");
+        let goto_paragraph_num = 1;
+        paragraph_viewer.show_paragraph_at(goto_paragraph_num);
 
-//         paragraph_file
-//     }
+        let actual_paragraph_num = paragraph_viewer.paragraph_num();
+        assert_ne!(goto_paragraph_num, actual_paragraph_num);
+        assert_eq!(0, actual_paragraph_num);
+    }
 
-//     fn get_file_many_paragraphs() -> NamedTempFile {
-//         let mut paragraphs = String::new();
-//         paragraphs += FIRST_PARAGRAPH;
-//         paragraphs += SECOND_PARAGRAPH;
+    #[test]
+    fn goto_exceeds_paragraphs() {
+        let mut paragraph_viewer = get_paragraph_viewer();
+        paragraph_viewer.load_paragraphs(get_file_many_paragraphs().path().to_path_buf());
+        assert_eq!(MANY_PARAGRAPHS_LEN, paragraph_viewer.num_paragraphs());
 
-//         let mut paragraph_file = NamedTempFile::new().expect("Could not create temporary file.");
-//         paragraph_file
-//             .reopen()
-//             .expect("Could not open temporary file for writing.");
-//         paragraph_file
-//             .write_all(paragraphs.as_bytes())
-//             .expect("Could not write to temporary file.");
+        let goto_paragraph_num = 3;
+        paragraph_viewer.show_paragraph_at(goto_paragraph_num);
 
-//         paragraph_file
-//     }
+        let actual_paragraph_num = paragraph_viewer.paragraph_num();
+        assert_ne!(goto_paragraph_num, actual_paragraph_num);
+        assert_eq!(0, actual_paragraph_num);
+    }
 
-//     #[test]
-//     fn goto_no_text() {
-//         let mut paragraph_viewer = get_paragraph_viewer();
-//         assert_eq!(0, paragraph_viewer.num_paragraphs());
+    #[test]
+    fn goto_paragraph_exists() {
+        let mut paragraph_viewer = get_paragraph_viewer();
+        paragraph_viewer.load_paragraphs(get_file_many_paragraphs().path().to_path_buf());
+        assert_eq!(MANY_PARAGRAPHS_LEN, paragraph_viewer.num_paragraphs());
 
-//         let goto_paragraph_num = 1;
-//         paragraph_viewer.show_paragraph_at(goto_paragraph_num);
+        let goto_paragraph_num = 1;
+        paragraph_viewer.show_paragraph_at(goto_paragraph_num);
 
-//         let actual_paragraph_num = paragraph_viewer.paragraph_num();
-//         assert_ne!(goto_paragraph_num, actual_paragraph_num);
-//         assert_eq!(0, actual_paragraph_num);
-//     }
+        let actual_paragraph_num = paragraph_viewer.paragraph_num();
+        assert_eq!(goto_paragraph_num, actual_paragraph_num);
+        assert_eq!(
+            &get_text_from_viewer(&paragraph_viewer.paragraph_view),
+            SECOND_PARAGRAPH
+        );
+        assert!(!paragraph_viewer.next_button.take().active());
+        assert!(paragraph_viewer.prev_button.take().active());
+    }
 
-//     #[test]
-//     fn goto_exceeds_paragraphs() {
-//         let mut paragraph_viewer = get_paragraph_viewer();
-//         paragraph_viewer.load_paragraphs(get_file_many_paragraphs().path().to_path_buf());
-//         assert_eq!(MANY_PARAGRAPHS_LEN, paragraph_viewer.num_paragraphs());
+    #[test]
+    fn next_no_text() {
+        let mut paragraph_viewer = get_paragraph_viewer();
+        assert_eq!(0, paragraph_viewer.num_paragraphs());
 
-//         let goto_paragraph_num = 3;
-//         paragraph_viewer.show_paragraph_at(goto_paragraph_num);
+        paragraph_viewer.show_next_paragraph();
+        let expected_paragraph_num = 0;
+        let actual_paragraph_num = paragraph_viewer.paragraph_num;
 
-//         let actual_paragraph_num = paragraph_viewer.paragraph_num();
-//         assert_ne!(goto_paragraph_num, actual_paragraph_num);
-//         assert_eq!(0, actual_paragraph_num);
-//     }
+        assert_eq!(actual_paragraph_num, expected_paragraph_num);
+    }
 
-//     #[test]
-//     fn goto_paragraph_exists() {
-//         let mut paragraph_viewer = get_paragraph_viewer();
-//         paragraph_viewer.load_paragraphs(get_file_many_paragraphs().path().to_path_buf());
-//         assert_eq!(MANY_PARAGRAPHS_LEN, paragraph_viewer.num_paragraphs());
+    #[test]
+    fn next_exceeds_paragraphs() {
+        let mut paragraph_viewer = get_paragraph_viewer();
+        paragraph_viewer.load_paragraphs(get_file_one_paragraph().path().to_path_buf());
+        assert_eq!(1, paragraph_viewer.num_paragraphs());
 
-//         let goto_paragraph_num = 1;
-//         paragraph_viewer.show_paragraph_at(goto_paragraph_num);
+        paragraph_viewer.show_paragraph_at(0);
+        assert!(!paragraph_viewer.next_button.take().active());
+        assert!(!paragraph_viewer.prev_button.take().active());
 
-//         let actual_paragraph_num = paragraph_viewer.paragraph_num();
-//         assert_eq!(goto_paragraph_num, actual_paragraph_num);
-//         assert_eq!(
-//             &get_text_from_viewer(&paragraph_viewer.paragraph_view),
-//             SECOND_PARAGRAPH
-//         );
-//         assert!(!paragraph_viewer.next_button.is_sensitive());
-//         assert!(paragraph_viewer.prev_button.is_sensitive());
-//     }
+        paragraph_viewer.show_next_paragraph();
+        let expected_paragraph_num = 0;
+        let actual_paragraph_num = paragraph_viewer.paragraph_num;
 
-//     #[test]
-//     fn next_no_text() {
-//         let mut paragraph_viewer = get_paragraph_viewer();
-//         assert_eq!(0, paragraph_viewer.num_paragraphs());
+        assert_eq!(actual_paragraph_num, expected_paragraph_num);
+    }
 
-//         paragraph_viewer.show_next_paragraph();
-//         let expected_paragraph_num = 0;
-//         let actual_paragraph_num = paragraph_viewer.paragraph_num;
+    #[test]
+    fn next_paragraph_exists() {
+        let mut paragraph_viewer = get_paragraph_viewer();
+        paragraph_viewer.load_paragraphs(get_file_many_paragraphs().path().to_path_buf());
+        assert_eq!(MANY_PARAGRAPHS_LEN, paragraph_viewer.num_paragraphs());
 
-//         assert_eq!(actual_paragraph_num, expected_paragraph_num);
-//     }
+        paragraph_viewer.show_paragraph_at(0);
+        assert!(paragraph_viewer.next_button.take().active());
+        assert!(!paragraph_viewer.prev_button.take().active());
 
-//     #[test]
-//     fn next_exceeds_paragraphs() {
-//         let mut paragraph_viewer = get_paragraph_viewer();
-//         paragraph_viewer.load_paragraphs(get_file_one_paragraph().path().to_path_buf());
-//         assert_eq!(1, paragraph_viewer.num_paragraphs());
+        paragraph_viewer.show_next_paragraph();
+        let expected_paragraph_num = 1;
+        let actual_paragraph_num = paragraph_viewer.paragraph_num;
 
-//         paragraph_viewer.show_paragraph_at(0);
-//         assert!(!paragraph_viewer.next_button.is_sensitive());
-//         assert!(!paragraph_viewer.prev_button.is_sensitive());
+        assert_eq!(actual_paragraph_num, expected_paragraph_num);
+        assert_eq!(
+            &get_text_from_viewer(&paragraph_viewer.paragraph_view),
+            SECOND_PARAGRAPH
+        );
+    }
 
-//         paragraph_viewer.show_next_paragraph();
-//         let expected_paragraph_num = 0;
-//         let actual_paragraph_num = paragraph_viewer.paragraph_num;
+    #[test]
+    fn previous_no_text() {
+        let mut paragraph_viewer = get_paragraph_viewer();
+        assert_eq!(0, paragraph_viewer.num_paragraphs());
 
-//         assert_eq!(actual_paragraph_num, expected_paragraph_num);
-//     }
+        paragraph_viewer.show_previous_paragraph();
+        let expected_paragraph_num = 0;
+        let actual_paragraph_num = paragraph_viewer.paragraph_num;
 
-//     #[test]
-//     fn next_paragraph_exists() {
-//         let mut paragraph_viewer = get_paragraph_viewer();
-//         paragraph_viewer.load_paragraphs(get_file_many_paragraphs().path().to_path_buf());
-//         assert_eq!(MANY_PARAGRAPHS_LEN, paragraph_viewer.num_paragraphs());
+        assert_eq!(actual_paragraph_num, expected_paragraph_num);
+    }
 
-//         paragraph_viewer.show_paragraph_at(0);
-//         assert!(paragraph_viewer.next_button.is_sensitive());
-//         assert!(!paragraph_viewer.prev_button.is_sensitive());
+    #[test]
+    fn previous_negative_paragraphs() {
+        let mut paragraph_viewer = get_paragraph_viewer();
+        paragraph_viewer.load_paragraphs(get_file_one_paragraph().path().to_path_buf());
+        assert_eq!(1, paragraph_viewer.num_paragraphs());
 
-//         paragraph_viewer.show_next_paragraph();
-//         let expected_paragraph_num = 1;
-//         let actual_paragraph_num = paragraph_viewer.paragraph_num;
+        paragraph_viewer.show_paragraph_at(0);
+        assert!(!paragraph_viewer.next_button.take().active());
+        assert!(!paragraph_viewer.prev_button.take().active());
 
-//         assert_eq!(actual_paragraph_num, expected_paragraph_num);
-//         assert_eq!(
-//             &get_text_from_viewer(&paragraph_viewer.paragraph_view),
-//             SECOND_PARAGRAPH
-//         );
-//     }
+        paragraph_viewer.show_previous_paragraph();
+        let expected_paragraph_num = 0;
+        let actual_paragraph_num = paragraph_viewer.paragraph_num;
 
-//     #[test]
-//     fn previous_no_text() {
-//         let mut paragraph_viewer = get_paragraph_viewer();
-//         assert_eq!(0, paragraph_viewer.num_paragraphs());
+        assert_eq!(actual_paragraph_num, expected_paragraph_num);
+    }
 
-//         paragraph_viewer.show_previous_paragraph();
-//         let expected_paragraph_num = 0;
-//         let actual_paragraph_num = paragraph_viewer.paragraph_num;
+    #[test]
+    fn previous_paragraph_exists() {
+        let mut paragraph_viewer = get_paragraph_viewer();
+        paragraph_viewer.load_paragraphs(get_file_many_paragraphs().path().to_path_buf());
+        assert_eq!(MANY_PARAGRAPHS_LEN, paragraph_viewer.num_paragraphs());
 
-//         assert_eq!(actual_paragraph_num, expected_paragraph_num);
-//     }
+        paragraph_viewer.show_paragraph_at(MANY_PARAGRAPHS_LEN - 1);
+        assert!(!paragraph_viewer.next_button.take().active());
+        assert!(paragraph_viewer.prev_button.take().active());
 
-//     #[test]
-//     fn previous_negative_paragraphs() {
-//         let mut paragraph_viewer = get_paragraph_viewer();
-//         paragraph_viewer.load_paragraphs(get_file_one_paragraph().path().to_path_buf());
-//         assert_eq!(1, paragraph_viewer.num_paragraphs());
+        paragraph_viewer.show_previous_paragraph();
+        let expected_paragraph_num = MANY_PARAGRAPHS_LEN - 2;
+        let actual_paragraph_num = paragraph_viewer.paragraph_num;
 
-//         paragraph_viewer.show_paragraph_at(0);
-//         assert!(!paragraph_viewer.next_button.is_sensitive());
-//         assert!(!paragraph_viewer.prev_button.is_sensitive());
+        assert_eq!(actual_paragraph_num, expected_paragraph_num);
+        assert_eq!(
+            &get_text_from_viewer(&paragraph_viewer.paragraph_view),
+            FIRST_PARAGRAPH
+        );
+    }
 
-//         paragraph_viewer.show_previous_paragraph();
-//         let expected_paragraph_num = 0;
-//         let actual_paragraph_num = paragraph_viewer.paragraph_num;
+    #[test]
+    fn shows_paragraph() {
+        let mut paragraph_viewer = get_paragraph_viewer();
+        paragraph_viewer.load_paragraphs(get_file_one_paragraph().path().to_path_buf());
+        assert_eq!(1, paragraph_viewer.num_paragraphs());
 
-//         assert_eq!(actual_paragraph_num, expected_paragraph_num);
-//     }
+        paragraph_viewer.show_paragraph_at(0);
 
-//     #[test]
-//     fn previous_paragraph_exists() {
-//         let mut paragraph_viewer = get_paragraph_viewer();
-//         paragraph_viewer.load_paragraphs(get_file_many_paragraphs().path().to_path_buf());
-//         assert_eq!(MANY_PARAGRAPHS_LEN, paragraph_viewer.num_paragraphs());
-
-//         paragraph_viewer.show_paragraph_at(MANY_PARAGRAPHS_LEN - 1);
-//         assert!(!paragraph_viewer.next_button.is_sensitive());
-//         assert!(paragraph_viewer.prev_button.is_sensitive());
-
-//         paragraph_viewer.show_previous_paragraph();
-//         let expected_paragraph_num = MANY_PARAGRAPHS_LEN - 2;
-//         let actual_paragraph_num = paragraph_viewer.paragraph_num;
-
-//         assert_eq!(actual_paragraph_num, expected_paragraph_num);
-//         assert_eq!(
-//             &get_text_from_viewer(&paragraph_viewer.paragraph_view),
-//             FIRST_PARAGRAPH
-//         );
-//     }
-
-//     #[test]
-//     fn shows_paragraph() {
-//         let mut paragraph_viewer = get_paragraph_viewer();
-//         paragraph_viewer.load_paragraphs(get_file_one_paragraph().path().to_path_buf());
-//         assert_eq!(1, paragraph_viewer.num_paragraphs());
-
-//         paragraph_viewer.show_paragraph_at(0);
-
-//         assert_eq!(
-//             &get_text_from_viewer(&paragraph_viewer.paragraph_view),
-//             FIRST_PARAGRAPH
-//         );
-//     }
-// }
+        assert_eq!(
+            &get_text_from_viewer(&paragraph_viewer.paragraph_view),
+            FIRST_PARAGRAPH
+        );
+    }
+}

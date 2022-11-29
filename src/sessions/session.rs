@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use crate::media::io::{AudioInput, AudioOutput};
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct Session {
     paragraph_num: usize,
     project_directory: PathBuf,

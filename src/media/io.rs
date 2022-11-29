@@ -457,7 +457,7 @@ impl Media {
     }
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct AudioOutput {
     output_device_name: String,
 }
@@ -526,7 +526,7 @@ pub fn output_device_names() -> Vec<String> {
     output_device_names
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
 pub struct AudioInput {
     input_device_name: String,
     sample_rate: u32,
@@ -657,13 +657,11 @@ impl AudioInput {
         input_device
             .supported_input_configs()
             .expect("No input configs found. No inputs in general?")
-            .filter(|config| {
+            .find(|config| {
                 config.channels() == self.channels
                     && desired_sample_rate >= config.min_sample_rate()
                     && desired_sample_rate <= config.max_sample_rate()
-            })
-            .nth(0)
-            .expect("Could not find a config with the desired channel and sample rate")
+            }).expect("Could not find a config with the desired channel and sample rate")
             .with_sample_rate(SampleRate(self.sample_rate))
     }
 }

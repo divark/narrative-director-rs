@@ -15,6 +15,11 @@
 - Audio widgets now use FLTK.
 - Text viewing is now using FLTK widgets.
 - Updated CPAL dependency to 0.14.
+- Paragraph Viewer tests now use FLTK widgets.
+- CI scripts to include FLTK dependencies.
+
+### Fixed
+- Clippy suggestions for improved code quality.
 
 ### Removed
 - Relm dependency for GUI framework.
