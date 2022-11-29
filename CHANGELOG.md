@@ -12,6 +12,8 @@
 
 ### Changed
 - About Dialog with description of program and icon.
+- Goto Dialog is now created in code using FLTK.
+- Paragraph Counter Label is now a Button that opens Goto Prompt on click.
 - Audio widgets now use FLTK.
 - Text viewing is now using FLTK widgets.
 - Updated CPAL dependency to 0.14.

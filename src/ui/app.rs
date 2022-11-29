@@ -16,7 +16,7 @@ use fltk::{
 
 use crate::{media::io::Media, sessions::session::Session, text::viewer::ParagraphViewer};
 
-use super::dialogs::about::about_dialog;
+use super::dialogs::{about::about_dialog, goto::GotoPrompt};
 
 #[derive(Copy, Clone)]
 pub enum UIActions {
@@ -27,7 +27,7 @@ pub enum UIActions {
     Record,
     AudioSkip(usize),
 
-    GoTo,
+    OpenGoto,
     LoadFile,
     //LoadRecent(String),
     OpenPreferences,
@@ -41,7 +41,7 @@ pub struct ViewerWidgets {
     pub next_button: RefCell<Button>,
     pub prev_button: RefCell<Button>,
 
-    pub progress_counter: Frame,
+    pub progress_counter: Button,
 }
 
 pub struct MediaTrackingWidgets {
@@ -73,6 +73,9 @@ pub struct MainApplication {
     pub paragraph_viewer: ParagraphViewer,
     pub media_io: Media,
 
+    // Dialogs
+    pub goto_dialog: GotoPrompt,
+
     // State
     pub session: Option<Session>,
 }
@@ -84,6 +87,7 @@ impl MainApplication {
 
         // 1: Create UI.
         let mut main_window = Window::new(100, 100, 640, 480, "Narrative Director");
+        main_window.emit(broadcaster, UIActions::Quit);
 
         let mut flex_column_layout = Flex::default_fill();
         flex_column_layout.set_type(group::FlexType::Column);
@@ -107,6 +111,8 @@ impl MainApplication {
 
             paragraph_viewer: ParagraphViewer::new(viewer_widgets),
             media_io: Media::new(ui_widgets, media_tracking_widgets),
+
+            goto_dialog: GotoPrompt::new(),
 
             session: None,
         }
@@ -189,7 +195,14 @@ impl MainApplication {
                         self.media_io.record(input_device);
                     }
                     UIActions::AudioSkip(pos_secs) => self.media_io.pause_at(pos_secs),
-                    UIActions::GoTo => todo!(),
+                    UIActions::OpenGoto => {
+                        self.goto_dialog.show(self.paragraph_viewer.paragraph_num());
+
+                        if let Some(chosen_paragraph_num) = self.goto_dialog.get_paragraph_num() {
+                            self.paragraph_viewer
+                                .show_paragraph_at(chosen_paragraph_num - 1);
+                        }
+                    }
                     UIActions::LoadFile => {
                         if let Some(file_path) = self.open() {
                             self.load_text_file(file_path);
@@ -205,7 +218,14 @@ impl MainApplication {
                             app::wait();
                         }
                     }
-                    UIActions::Quit => break,
+                    UIActions::Quit => {
+                        if let Some(session) = &mut self.session {
+                            session.set_paragraph_num(self.paragraph_viewer.paragraph_num());
+                            session.save();
+                        }
+
+                        break;
+                    }
                 }
             }
         }
@@ -250,7 +270,7 @@ fn create_menu_bar(
         Shortcut::Command | 'g',
         menu::MenuFlag::MenuDivider,
         *action_broadcaster,
-        UIActions::GoTo,
+        UIActions::OpenGoto,
     );
 
     menu_bar.add_emit(
@@ -281,7 +301,12 @@ fn create_widget_layout(
     menu_bar: &SysMenuBar,
 ) -> (ViewerWidgets, MediaTrackingWidgets, MainUIWidgets) {
     // Paragraph Counter widget
-    let counter_text = Frame::default().with_label("0/0").with_align(Align::Center);
+    let mut counter_text = Button::default()
+        .with_label("0/0")
+        .with_align(Align::Center);
+    counter_text.set_frame(FrameType::NoBox);
+    counter_text.clear_visible_focus();
+    counter_text.emit(*action_broadcaster, UIActions::OpenGoto);
 
     flex_column_layout.set_size(&counter_text, counter_text.label_size());
 

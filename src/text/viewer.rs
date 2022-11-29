@@ -4,21 +4,20 @@ use std::io::Read;
 use std::path::PathBuf;
 
 use fltk::button::Button;
-use fltk::frame::Frame;
 use fltk::prelude::{DisplayExt, WidgetExt};
 use fltk::text::TextDisplay;
 
 use crate::ui::app::ViewerWidgets;
 
 struct Counter {
-    progress_label: Frame,
+    progress_label: Button,
 
     current_pos: usize,
     total_elements: usize,
 }
 
 impl Counter {
-    pub fn new(progress_label: Frame) -> Self {
+    pub fn new(progress_label: Button) -> Self {
         Counter {
             progress_label,
             current_pos: 0,
