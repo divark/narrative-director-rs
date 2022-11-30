@@ -16,7 +16,7 @@ use fltk::{
 
 use crate::{media::io::Media, sessions::session::Session, text::viewer::ParagraphViewer};
 
-use super::dialogs::{about::about_dialog, goto::GotoPrompt};
+use super::dialogs::{about::AboutDialog, goto::GotoPrompt};
 
 #[derive(Copy, Clone)]
 pub enum UIActions {
@@ -75,6 +75,7 @@ pub struct MainApplication {
 
     // Dialogs
     pub goto_dialog: GotoPrompt,
+    pub about_dialog: AboutDialog,
 
     // State
     pub session: Option<Session>,
@@ -113,6 +114,7 @@ impl MainApplication {
             media_io: Media::new(ui_widgets, media_tracking_widgets),
 
             goto_dialog: GotoPrompt::new(),
+            about_dialog: AboutDialog::new(),
 
             session: None,
         }
@@ -198,7 +200,7 @@ impl MainApplication {
                     UIActions::OpenGoto => {
                         self.goto_dialog.show(self.paragraph_viewer.paragraph_num());
 
-                        if let Some(chosen_paragraph_num) = self.goto_dialog.get_paragraph_num() {
+                        if let Some(chosen_paragraph_num) = self.goto_dialog.get_paragraph_num(self.paragraph_viewer.num_paragraphs()) {
                             self.paragraph_viewer
                                 .show_paragraph_at(chosen_paragraph_num - 1);
                         }
@@ -210,14 +212,7 @@ impl MainApplication {
                         }
                     }
                     UIActions::OpenPreferences => todo!(),
-                    UIActions::About => {
-                        let mut about_dialog = about_dialog();
-
-                        about_dialog.show();
-                        while about_dialog.shown() {
-                            app::wait();
-                        }
-                    }
+                    UIActions::About => self.about_dialog.show(),
                     UIActions::Quit => {
                         if let Some(session) = &mut self.session {
                             session.set_paragraph_num(self.paragraph_viewer.paragraph_num());

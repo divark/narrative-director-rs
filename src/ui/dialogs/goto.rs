@@ -27,7 +27,7 @@ impl GotoPrompt {
         pack_horizontal_layout.set_spacing(20);
 
         Frame::default()
-            .with_size(125, 0)
+            .with_size(130, 0)
             .with_label("Enter Paragraph Number:");
 
         let paragraph_num_input = IntInput::default().with_size(100, 0);
@@ -50,9 +50,6 @@ impl GotoPrompt {
         self.paragraph_number_input
             .set_value(&user_adjusted_paragraph_num.to_string());
         self.ok_button.activate();
-        self.ok_button
-            .take_focus()
-            .expect("Could not take focus of OK Button.");
 
         let mut goto_window = self.window.clone();
         self.ok_button.set_callback(move |button| {
@@ -63,7 +60,7 @@ impl GotoPrompt {
         self.window.show();
     }
 
-    pub fn get_paragraph_num(&self) -> Option<usize> {
+    pub fn get_paragraph_num(&self, max_num_paragraphs: usize) -> Option<usize> {
         while self.window.shown() {
             app::wait();
         }
@@ -72,12 +69,16 @@ impl GotoPrompt {
             return None;
         }
 
+        if max_num_paragraphs == 0 {
+            return None;
+        }
+
         let paragraph_num_choice = self
             .paragraph_number_input
             .value()
             .parse::<usize>()
-            .expect("User input for paragraph number is not a integer.");
+            .unwrap_or(0);
 
-        Some(paragraph_num_choice.clamp(1, usize::MAX))
+        Some(paragraph_num_choice.clamp(1, max_num_paragraphs))
     }
 }
