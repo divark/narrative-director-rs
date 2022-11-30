@@ -1,11 +1,12 @@
 use fltk::{
+    app,
     enums::FrameType,
     frame::Frame,
     group::{Flex, FlexType},
     image::PngImage,
     prelude::*,
     text::{TextBuffer, TextDisplay, WrapMode},
-    window::Window, app,
+    window::Window,
 };
 
 pub struct AboutDialog {

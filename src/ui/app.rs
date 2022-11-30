@@ -200,7 +200,10 @@ impl MainApplication {
                     UIActions::OpenGoto => {
                         self.goto_dialog.show(self.paragraph_viewer.paragraph_num());
 
-                        if let Some(chosen_paragraph_num) = self.goto_dialog.get_paragraph_num(self.paragraph_viewer.num_paragraphs()) {
+                        if let Some(chosen_paragraph_num) = self
+                            .goto_dialog
+                            .get_paragraph_num(self.paragraph_viewer.num_paragraphs())
+                        {
                             self.paragraph_viewer
                                 .show_paragraph_at(chosen_paragraph_num - 1);
                         }
