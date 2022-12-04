@@ -1,11 +1,12 @@
 use fltk::{
     app,
     button::Button,
+    enums::Align,
     frame::Frame,
     group::{Pack, PackType},
-    input::{IntInput, Input},
+    input::{Input, IntInput},
     prelude::*,
-    window::Window, enums::Align,
+    window::Window,
 };
 
 pub struct GotoPrompt {
