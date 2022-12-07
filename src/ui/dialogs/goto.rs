@@ -48,8 +48,8 @@ impl GotoPrompt {
     /// current_paragraph_num >= 0
     ///
     /// Postconditions:
-    /// Input value = current_paragraph_num + 1
-    /// Goto Prompt is visible
+    /// Input value = current_paragraph_num + 1,
+    /// Goto Prompt is visible,
     /// Goto Button is now active.
     pub fn show(&mut self, current_paragraph_num: usize) {
         let user_adjusted_paragraph_num = current_paragraph_num + 1;
@@ -122,6 +122,8 @@ mod test {
         goto_prompt.show(CURRENT_NUM_PRG_BOUNDED);
         assert!(goto_prompt.goto_button.active());
 
+        // do_callback is the equivalent of clicking the button, since clicking or interacting
+        // with a widget invokes the callback.
         goto_prompt.goto_button.do_callback();
         assert!(!goto_prompt.goto_button.active());
     }
@@ -134,6 +136,8 @@ mod test {
         goto_prompt.show(CURRENT_NUM_PRG_BOUNDED);
         assert!(goto_prompt.goto_button.active());
 
+        // do_callback is the equivalent of clicking the button, since clicking or interacting
+        // with a widget invokes the callback.
         goto_prompt.cancel_button.do_callback();
         assert!(goto_prompt.goto_button.active());
     }
@@ -154,6 +158,8 @@ mod test {
             1
         );
 
+        // do_callback is the equivalent of clicking the button, since clicking or interacting
+        // with a widget invokes the callback.
         goto_prompt.goto_button.do_callback();
         assert!(!goto_prompt.window.visible());
 
@@ -177,6 +183,8 @@ mod test {
             CURRENT_NUM_PRG_BOUNDED + 1
         );
 
+        // do_callback is the equivalent of clicking the button, since clicking or interacting
+        // with a widget invokes the callback.
         goto_prompt.goto_button.do_callback();
         assert!(!goto_prompt.window.visible());
 
@@ -200,6 +208,8 @@ mod test {
             CURRENT_NUM_PRG_BOUNDED + 1
         );
 
+        // do_callback is the equivalent of clicking the button, since clicking or interacting
+        // with a widget invokes the callback.
         goto_prompt.goto_button.do_callback();
         assert!(!goto_prompt.window.visible());
 
@@ -226,6 +236,8 @@ mod test {
             CURRENT_NUM_PRG_BOUNDED
         );
 
+        // do_callback is the equivalent of clicking the button, since clicking or interacting
+        // with a widget invokes the callback.
         goto_prompt.goto_button.do_callback();
         assert!(!goto_prompt.window.visible());
 
@@ -252,6 +264,8 @@ mod test {
             CURRENT_NUM_PRG_UNBOUNDED
         );
 
+        // do_callback is the equivalent of clicking the button, since clicking or interacting
+        // with a widget invokes the callback.
         goto_prompt.goto_button.do_callback();
         assert!(!goto_prompt.window.visible());
 
@@ -278,6 +292,8 @@ mod test {
             1
         );
 
+        // do_callback is the equivalent of clicking the button, since clicking or interacting
+        // with a widget invokes the callback.
         goto_prompt.goto_button.do_callback();
         assert!(!goto_prompt.window.visible());
 
