@@ -10,6 +10,7 @@
 - Creation of Main Window UI in code.
 - Changelog to keep track of changes from now on.
 - Unit Testing and Documentation for Goto Prompt.
+- Mock Diagram for Audio Preferences.
 
 ### Changed
 - About Dialog with description of program and icon.
