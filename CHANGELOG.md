@@ -9,6 +9,7 @@
 - FLTK-RS as the new GUI framework.
 - Creation of Main Window UI in code.
 - Changelog to keep track of changes from now on.
+- Unit Testing and Documentation for Goto Prompt.
 
 ### Changed
 - About Dialog with description of program and icon.
