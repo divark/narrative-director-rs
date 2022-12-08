@@ -16,7 +16,7 @@ use fltk::{
 
 use crate::{media::io::Media, sessions::session::Session, text::viewer::ParagraphViewer};
 
-use super::dialogs::{about::AboutDialog, goto::GotoPrompt};
+use super::dialogs::{about::AboutDialog, goto::GotoPrompt, preferences::PreferencesDialog};
 
 #[derive(Copy, Clone)]
 pub enum UIActions {
@@ -76,6 +76,7 @@ pub struct MainApplication {
     // Dialogs
     pub goto_dialog: GotoPrompt,
     pub about_dialog: AboutDialog,
+    pub preferences_dialog: PreferencesDialog,
 
     // State
     pub session: Option<Session>,
@@ -115,6 +116,7 @@ impl MainApplication {
 
             goto_dialog: GotoPrompt::new(),
             about_dialog: AboutDialog::new(),
+            preferences_dialog: PreferencesDialog::new(),
 
             session: None,
         }
@@ -214,7 +216,7 @@ impl MainApplication {
                             self.load_audio_file();
                         }
                     }
-                    UIActions::OpenPreferences => todo!(),
+                    UIActions::OpenPreferences => self.preferences_dialog.show(),
                     UIActions::About => self.about_dialog.show(),
                     UIActions::Quit => {
                         if let Some(session) = &mut self.session {

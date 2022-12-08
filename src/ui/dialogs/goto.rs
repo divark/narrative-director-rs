@@ -1,5 +1,7 @@
 use fltk::{app, button::Button, input::IntInput, prelude::*, window::Window};
 
+use crate::ui::common::shift_right_by_label;
+
 pub struct GotoPrompt {
     window: Window,
     paragraph_number_input: IntInput,
@@ -17,15 +19,7 @@ impl GotoPrompt {
             .with_size(400, 75);
 
         let mut paragraph_num_input = IntInput::new(130, 10, 260, 23, "Paragraph Number:");
-        let paragraph_input_label_offset = paragraph_num_input.label_size();
-        paragraph_num_input.set_pos(
-            paragraph_num_input.x() + paragraph_input_label_offset,
-            paragraph_num_input.y(),
-        );
-        paragraph_num_input.set_size(
-            paragraph_num_input.width() - paragraph_input_label_offset,
-            paragraph_num_input.height(),
-        );
+        shift_right_by_label(&mut paragraph_num_input);
 
         let ok_button = Button::new(300, 43, 90, 23, "Go To");
         let cancel_button = Button::new(200, 43, 90, 23, "Cancel");
