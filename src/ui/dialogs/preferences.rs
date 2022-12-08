@@ -1,6 +1,11 @@
-use fltk::{misc::InputChoice, window::Window, prelude::{WidgetExt, WidgetBase, GroupExt}, group::{Tabs, Group}};
+use fltk::{
+    group::{Group, Tabs},
+    misc::InputChoice,
+    prelude::{GroupExt, WidgetBase, WidgetExt},
+    window::Window,
+};
 
-use crate::ui::common::{shift_right_by_label, shift_down_by_label};
+use crate::ui::common::{shift_down_by_label, shift_right_by_label};
 
 pub struct PreferencesDialog {
     window: Window,
@@ -46,7 +51,7 @@ impl PreferencesDialog {
             audio_output_name,
             audio_input_name,
             audio_input_sample_rate,
-            audio_input_channels
+            audio_input_channels,
         }
     }
 
