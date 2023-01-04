@@ -10,4 +10,3 @@ where
 }
 
 // TODO: Vertical Stacker builder type to reduce magic number usage.
-

@@ -310,4 +310,3 @@ impl PreferencesDialog {
 //         .disconnect(device_changer_id);
 //     preference_widgets.dialog.hide();
 // }
-
