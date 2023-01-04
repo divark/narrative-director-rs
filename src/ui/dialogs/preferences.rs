@@ -1,12 +1,39 @@
 use fltk::{
+    enums::Align,
     group::{Group, Tabs},
     misc::InputChoice,
     prelude::{GroupExt, WidgetBase, WidgetExt},
     window::Window,
 };
 
-use crate::ui::common::{shift_down_by_label, shift_right_by_label};
+use crate::{
+    media::io::{input_device_names, output_device_names},
+    sessions::session::Session,
+};
 
+/// Clears, then adds all choices into the given input.
+fn repopulate_input_choices<T>(input: &mut InputChoice, choices: &[T])
+where
+    T: std::fmt::Display,
+{
+    input.clear();
+
+    for choice in choices {
+        input.add(&choice.to_string());
+    }
+}
+
+/// Selects the given choice in the input from its position in choices.
+fn set_active_in_input_choices<T>(input: &mut InputChoice, choices: &[T], choice: &T)
+where
+    T: PartialEq<T>,
+{
+    let choice_idx = choices
+        .iter()
+        .position(|other_choice| choice == other_choice)
+        .unwrap();
+    input.set_value_index(choice_idx as i32);
+}
 pub struct PreferencesDialog {
     window: Window,
 
@@ -17,29 +44,47 @@ pub struct PreferencesDialog {
     audio_input_channels: InputChoice,
 }
 
+// TODO: Turn magic numbers into constants for clarity.
 impl PreferencesDialog {
     pub fn new() -> PreferencesDialog {
-        let preferences_window = Window::default().with_size(400, 300);
+        let preferences_window = Window::default()
+            .with_size(400, 300)
+            .with_label("Preferences");
 
         let preference_topics = Tabs::new(10, 10, 380, 280, "");
 
-        let audio_tab = Group::new(10, 20, 380, 260, "Audio\t\t");
+        let audio_tab = Group::new(20, 30, 380, 250, "Audio\t\t");
 
-        let mut output_tab = Group::new(20, 20, 360, 65, "Output");
-        shift_down_by_label(&mut output_tab);
-        let mut audio_output_name = InputChoice::new(90, 30, 340 - 90, 25, "Device:");
-        shift_right_by_label(&mut audio_output_name);
-        output_tab.end();
+        let mut output_widget_group = Group::new(30, 40, 360, 50, "Output");
+        let output_label_offset = output_widget_group.label_size();
+        output_widget_group.set_align(Align::TopLeft);
+        output_widget_group.set_pos(
+            output_widget_group.x(),
+            output_widget_group.y() + output_label_offset,
+        );
+        let audio_output_name =
+            InputChoice::new(40 + 90, 50 + output_label_offset, 320 - 80, 30, "Device:");
+        output_widget_group.end();
 
-        let mut input_tab = Group::new(20, 105, 360, 185, "Input");
-        shift_down_by_label(&mut input_tab);
-        let mut audio_input_name = InputChoice::new(90, 115, 340 - 90, 25, "Device");
-        shift_right_by_label(&mut audio_input_name);
-        let mut audio_input_sample_rate = InputChoice::new(90, 125, 340 - 90, 25, "Sample Rate");
-        shift_right_by_label(&mut audio_input_sample_rate);
-        let mut audio_input_channels = InputChoice::new(90, 135, 340 - 90, 25, "Channels");
-        shift_right_by_label(&mut audio_input_channels);
-        input_tab.end();
+        let mut input_widget_group = Group::new(30, 110 + output_label_offset, 360, 170, "Input");
+        input_widget_group.set_align(Align::TopLeft);
+        let audio_input_name =
+            InputChoice::new(40 + 90, 120 + output_label_offset, 320 - 80, 30, "Device:");
+        let audio_input_sample_rate = InputChoice::new(
+            40 + 90,
+            160 + output_label_offset,
+            320 - 80,
+            30,
+            "Sample Rate:",
+        );
+        let audio_input_channels = InputChoice::new(
+            40 + 90,
+            200 + output_label_offset,
+            320 - 80,
+            30,
+            "Channels:",
+        );
+        input_widget_group.end();
 
         audio_tab.end();
 
@@ -55,7 +100,39 @@ impl PreferencesDialog {
         }
     }
 
-    pub fn show(&mut self) {
+    pub fn show(&mut self, session: &Session) {
+        let audio_output_choices = output_device_names();
+        repopulate_input_choices(&mut self.audio_output_name, &audio_output_choices);
+        set_active_in_input_choices(
+            &mut self.audio_output_name,
+            &audio_output_choices,
+            &session.audio_output().device_name().to_string(),
+        );
+
+        let audio_input_choices = input_device_names();
+        repopulate_input_choices(&mut self.audio_input_name, &audio_input_choices);
+        set_active_in_input_choices(
+            &mut self.audio_input_name,
+            &audio_input_choices,
+            &session.audio_input().device_name().to_string(),
+        );
+
+        let audio_input_sample_rates = session.audio_input().sample_rates();
+        repopulate_input_choices(&mut self.audio_input_sample_rate, &audio_input_sample_rates);
+        set_active_in_input_choices(
+            &mut self.audio_input_sample_rate,
+            &audio_input_sample_rates,
+            &session.audio_input().sample_rate(),
+        );
+
+        let audio_input_channels = session.audio_input().channels();
+        repopulate_input_choices(&mut self.audio_input_channels, &audio_input_channels);
+        set_active_in_input_choices(
+            &mut self.audio_input_channels,
+            &audio_input_channels,
+            &session.audio_input().channel(),
+        );
+
         self.window.show();
     }
 }
@@ -233,3 +310,4 @@ impl PreferencesDialog {
 //         .disconnect(device_changer_id);
 //     preference_widgets.dialog.hide();
 // }
+

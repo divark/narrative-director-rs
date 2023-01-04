@@ -21,6 +21,7 @@
 - Updated CPAL dependency to 0.14.
 - Paragraph Viewer tests now use FLTK widgets.
 - CI scripts to include FLTK dependencies.
+- Audio Preferences section of Preferences has been converted to use FLTK widgets.
 
 ### Fixed
 - Clippy suggestions for improved code quality.

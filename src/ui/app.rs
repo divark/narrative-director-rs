@@ -216,7 +216,18 @@ impl MainApplication {
                             self.load_audio_file();
                         }
                     }
-                    UIActions::OpenPreferences => self.preferences_dialog.show(),
+                    UIActions::OpenPreferences => {
+                        // TODO: Split session into AudioPreferences, TextPreferences, and Session.
+                        // That way, users can use the Preferences dialog without needing an existing
+                        // session open.
+                        if self.session.is_some() {
+                            self.preferences_dialog.show(
+                                self.session.as_ref().expect(
+                                    "Session is needed to fetch current audio information.",
+                                ),
+                            );
+                        }
+                    }
                     UIActions::About => self.about_dialog.show(),
                     UIActions::Quit => {
                         if let Some(session) = &mut self.session {

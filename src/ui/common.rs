@@ -9,13 +9,5 @@ where
     choice.set_size(choice.width() - choice_label_offset, choice.height());
 }
 
-pub fn shift_down_by_label<T>(choice: &mut T)
-where
-    T: WidgetExt,
-{
-    let choice_label_offset = choice.label_size();
-    choice.set_pos(choice.x(), choice.y() + choice_label_offset);
-    choice.set_size(choice.width(), choice.height() - choice_label_offset);
-}
-
 // TODO: Vertical Stacker builder type to reduce magic number usage.
+
