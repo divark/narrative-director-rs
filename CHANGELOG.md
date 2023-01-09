@@ -11,6 +11,7 @@
 - Changelog to keep track of changes from now on.
 - Unit Testing and Documentation for Goto Prompt.
 - Mock Diagram for Audio Preferences.
+- Wireframe Diagram for Audio Preferences.
 
 ### Changed
 - About Dialog with description of program and icon.

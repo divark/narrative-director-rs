@@ -222,7 +222,7 @@ impl MainApplication {
                         // session open.
                         if self.session.is_some() {
                             self.preferences_dialog.show(
-                                self.session.as_ref().expect(
+                                self.session.as_mut().expect(
                                     "Session is needed to fetch current audio information.",
                                 ),
                             );

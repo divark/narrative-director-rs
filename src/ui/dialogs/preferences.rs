@@ -1,8 +1,10 @@
 use fltk::{
-    enums::Align,
+    app,
+    button::Button,
+    enums::{Align, Font, FrameType},
     group::{Group, Tabs},
     misc::InputChoice,
-    prelude::{GroupExt, WidgetBase, WidgetExt},
+    prelude::{GroupExt, WidgetBase, WidgetExt, WindowExt},
     window::Window,
 };
 
@@ -42,65 +44,115 @@ pub struct PreferencesDialog {
     audio_input_name: InputChoice,
     audio_input_sample_rate: InputChoice,
     audio_input_channels: InputChoice,
+
+    save_button: Button,
+}
+
+struct AudioTabWidgets {
+    audio_output_name: InputChoice,
+
+    audio_input_name: InputChoice,
+    audio_input_sample_rate: InputChoice,
+    audio_input_channels: InputChoice,
+}
+
+fn create_audio_tab() -> AudioTabWidgets {
+    let audio_tab = Group::new(20, 30, 360, 250, "Audio\t\t");
+
+    let mut output_widget_group = Group::new(20, 40, 360, 50, "Output");
+    let output_label_offset = output_widget_group.label_size();
+    output_widget_group.set_align(Align::TopLeft);
+    output_widget_group.set_pos(
+        output_widget_group.x(),
+        output_widget_group.y() + output_label_offset,
+    );
+    output_widget_group.set_label_font(Font::HelveticaBold);
+    output_widget_group.set_frame(FrameType::ThinDownFrame);
+    let audio_output_name =
+        InputChoice::new(40 + 90, 50 + output_label_offset, 320 - 80, 30, "Device:");
+    output_widget_group.end();
+
+    let mut input_widget_group = Group::new(
+        20,
+        110 + output_label_offset,
+        360,
+        170 - output_label_offset,
+        "Input",
+    );
+    input_widget_group.set_align(Align::TopLeft);
+    input_widget_group.set_label_font(Font::HelveticaBold);
+    input_widget_group.set_frame(FrameType::ThinDownFrame);
+    let audio_input_name =
+        InputChoice::new(40 + 90, 120 + output_label_offset, 320 - 80, 30, "Device:");
+    let audio_input_sample_rate = InputChoice::new(
+        40 + 90,
+        160 + output_label_offset,
+        320 - 80,
+        30,
+        "Sample Rate:",
+    );
+    let audio_input_channels = InputChoice::new(
+        40 + 90,
+        200 + output_label_offset,
+        320 - 80,
+        30,
+        "Channels:",
+    );
+    input_widget_group.end();
+
+    audio_tab.end();
+
+    AudioTabWidgets {
+        audio_output_name,
+        audio_input_name,
+        audio_input_sample_rate,
+        audio_input_channels,
+    }
 }
 
 // TODO: Turn magic numbers into constants for clarity.
 impl PreferencesDialog {
     pub fn new() -> PreferencesDialog {
         let preferences_window = Window::default()
-            .with_size(400, 300)
+            .with_size(400, 340)
             .with_label("Preferences");
 
         let preference_topics = Tabs::new(10, 10, 380, 280, "");
 
-        let audio_tab = Group::new(20, 30, 380, 250, "Audio\t\t");
-
-        let mut output_widget_group = Group::new(30, 40, 360, 50, "Output");
-        let output_label_offset = output_widget_group.label_size();
-        output_widget_group.set_align(Align::TopLeft);
-        output_widget_group.set_pos(
-            output_widget_group.x(),
-            output_widget_group.y() + output_label_offset,
-        );
-        let audio_output_name =
-            InputChoice::new(40 + 90, 50 + output_label_offset, 320 - 80, 30, "Device:");
-        output_widget_group.end();
-
-        let mut input_widget_group = Group::new(30, 110 + output_label_offset, 360, 170, "Input");
-        input_widget_group.set_align(Align::TopLeft);
-        let audio_input_name =
-            InputChoice::new(40 + 90, 120 + output_label_offset, 320 - 80, 30, "Device:");
-        let audio_input_sample_rate = InputChoice::new(
-            40 + 90,
-            160 + output_label_offset,
-            320 - 80,
-            30,
-            "Sample Rate:",
-        );
-        let audio_input_channels = InputChoice::new(
-            40 + 90,
-            200 + output_label_offset,
-            320 - 80,
-            30,
-            "Channels:",
-        );
-        input_widget_group.end();
-
-        audio_tab.end();
+        let audio_tab = create_audio_tab();
 
         preference_topics.end();
+
+        let mut preferences_window_clone = preferences_window.clone();
+        let mut cancel_button = Button::new(260, 300, 60, 30, "Cancel");
+        cancel_button.set_callback(move |_| {
+            preferences_window_clone.hide();
+        });
+
+        let mut preferences_window_clone = preferences_window.clone();
+        let mut save_button = Button::new(330, 300, 60, 30, "Save");
+        save_button.set_callback(move |button| {
+            button.deactivate();
+            preferences_window_clone.hide();
+        });
+
+        preferences_window.end();
 
         PreferencesDialog {
             window: preferences_window,
 
-            audio_output_name,
-            audio_input_name,
-            audio_input_sample_rate,
-            audio_input_channels,
+            audio_output_name: audio_tab.audio_output_name,
+            audio_input_name: audio_tab.audio_input_name,
+            audio_input_sample_rate: audio_tab.audio_input_sample_rate,
+            audio_input_channels: audio_tab.audio_input_channels,
+
+            save_button,
         }
     }
 
-    pub fn show(&mut self, session: &Session) {
+    /// Clears and fills in information about current audio devices
+    /// to relevant audio input widgets.
+    fn populate_audio_tab_inputs(&mut self, session: &Session) {
         let audio_output_choices = output_device_names();
         repopulate_input_choices(&mut self.audio_output_name, &audio_output_choices);
         set_active_in_input_choices(
@@ -132,8 +184,49 @@ impl PreferencesDialog {
             &audio_input_channels,
             &session.audio_input().channel(),
         );
+    }
+
+    /// Pulls the currently selected values for all audio input widgets
+    /// and updates the current session accordingly.
+    fn save_audio_preferences(&self, session: &mut Session) {
+        session
+            .audio_output_mut()
+            .set_device_name(self.audio_output_name.value().unwrap());
+
+        let audio_input = session.audio_input_mut();
+        audio_input.set_device_name(self.audio_input_name.value().unwrap());
+        audio_input.set_channels(
+            self.audio_input_channels
+                .value()
+                .unwrap()
+                .parse::<u16>()
+                .expect("Could not get number from channels input."),
+        );
+        audio_input.set_sample_rate(
+            self.audio_input_sample_rate
+                .value()
+                .unwrap()
+                .parse::<u32>()
+                .expect("Could not get number from sample rate input."),
+        );
+    }
+
+    pub fn show(&mut self, session: &mut Session) {
+        self.save_button.activate();
+
+        self.populate_audio_tab_inputs(session);
 
         self.window.show();
+
+        while self.window.shown() {
+            app::wait();
+        }
+
+        if self.save_button.active() {
+            return;
+        }
+
+        self.save_audio_preferences(session);
     }
 }
 
