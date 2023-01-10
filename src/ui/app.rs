@@ -188,7 +188,10 @@ impl MainApplication {
 
                         self.media_io.play(output_device);
                     }
-                    UIActions::Stop => self.media_io.stop(),
+                    UIActions::Stop => {
+                        self.media_io.stop();
+                        self.paragraph_viewer.toggle_nav_buttons();
+                    }
                     UIActions::Record => {
                         let input_device = self
                             .session

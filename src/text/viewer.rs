@@ -74,7 +74,7 @@ impl ParagraphViewer {
         }
     }
 
-    fn toggle_nav_buttons(&mut self) {
+    pub fn toggle_nav_buttons(&mut self) {
         if self.progress_counter.at_beginning() {
             self.prev_button.get_mut().deactivate();
         } else {

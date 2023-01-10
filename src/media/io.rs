@@ -131,7 +131,6 @@ enum SenderMessages {
     Recording(usize),
 
     Stop(PathBuf),
-    ResetNavButtons(bool, bool),
 }
 
 fn attach_progress_tracking(
@@ -242,21 +241,6 @@ fn attach_progress_tracking(
                     playback_widget.set_current(0);
                     playback_widget.update_playback();
                 }
-                SenderMessages::ResetNavButtons(next_btn_sensitivity, prev_btn_sensitivity) => {
-                    if next_btn_sensitivity {
-                        widgets.next_button.get_mut().activate();
-                    } else {
-                        widgets.next_button.get_mut().deactivate();
-                    }
-
-                    if prev_btn_sensitivity {
-                        widgets.prev_button.get_mut().activate();
-                    } else {
-                        widgets.prev_button.get_mut().deactivate();
-                    }
-
-                    break;
-                }
             }
             app::awake();
         }
@@ -331,8 +315,6 @@ impl Media {
 
         let audio_location = self.audio_location.as_ref().unwrap().clone();
 
-        let (next_btn_sensitivity, prev_btn_sensitivity) = self.nav_button_state;
-
         thread::spawn(move || {
             let play_status = sender.send(SenderMessages::Play);
             if play_status.is_err() {
@@ -362,12 +344,6 @@ impl Media {
             sender
                 .send(SenderMessages::Stop(audio_location))
                 .expect("Play: Could not stop recording.");
-            sender
-                .send(SenderMessages::ResetNavButtons(
-                    next_btn_sensitivity,
-                    prev_btn_sensitivity,
-                ))
-                .expect("Play: Could not reset Navigation Buttons.");
         });
     }
 
@@ -444,16 +420,9 @@ impl Media {
         });
 
         let audio_location = self.audio_location.as_ref().unwrap().clone();
-        let (next_btn_sensitivity, prev_btn_sensitivity) = self.nav_button_state;
         sender
             .send(SenderMessages::Stop(audio_location))
             .expect("Stop: Could not stop recording.");
-        sender
-            .send(SenderMessages::ResetNavButtons(
-                next_btn_sensitivity,
-                prev_btn_sensitivity,
-            ))
-            .expect("Stop: Could not reset Navigation Buttons.");
     }
 }
 
@@ -717,7 +686,7 @@ fn output_stream_from(
     let file_spec = file_decoder.spec();
     let sample_rate = file_spec.sample_rate;
     let channels = file_spec.channels;
-    let samples_to_skip = (starting_pos_secs as u32) * (sample_rate as u32);
+    let samples_to_skip = (starting_pos_secs as u32) * sample_rate;
 
     if samples_to_skip > num_samples {
         bail!("output_stream_from error: Starting position exceeds file time.");
