@@ -1,6 +1,8 @@
 /target
 /.cargo
 *.glade~
+*.drawio.bkp
+*.drawio.dtmp
 
 # IDEs and Code Editors
 /.idea

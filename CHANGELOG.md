@@ -10,6 +10,8 @@
 - Creation of Main Window UI in code.
 - Changelog to keep track of changes from now on.
 - Unit Testing and Documentation for Goto Prompt.
+- Mock Diagram for General Preferences.
+- Wireframe Diagram for General Preferences.
 - Mock Diagram for Audio Preferences.
 - Wireframe Diagram for Audio Preferences.
 
@@ -23,6 +25,7 @@
 - Paragraph Viewer tests now use FLTK widgets.
 - CI scripts to include FLTK dependencies.
 - Audio Preferences section of Preferences has been converted to use FLTK widgets.
+- General Preferences section of Preferences has been converted to use FLTK widgets.
 
 ### Fixed
 - Clippy suggestions for improved code quality.
