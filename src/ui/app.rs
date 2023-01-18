@@ -229,6 +229,8 @@ impl MainApplication {
                                     "Session is needed to fetch current audio information.",
                                 ),
                             );
+
+                            self.load_audio_file();
                         }
                     }
                     UIActions::About => self.about_dialog.show(),

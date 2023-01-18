@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use fltk::{
     app,
     button::Button,
@@ -6,7 +8,7 @@ use fltk::{
     misc::InputChoice,
     prelude::{DisplayExt, GroupExt, WidgetBase, WidgetExt, WindowExt},
     text::{TextBuffer, TextDisplay},
-    window::Window,
+    window::Window, dialog,
 };
 
 use crate::{
@@ -42,7 +44,6 @@ pub struct PreferencesDialog {
     window: Window,
 
     project_directory_text: TextDisplay,
-    project_directory_chooser_button: Button,
 
     audio_output_name: InputChoice,
 
@@ -55,7 +56,6 @@ pub struct PreferencesDialog {
 
 struct GeneralTabWidgets {
     project_directory_text: TextDisplay,
-    project_directory_chooser_button: Button,
 }
 
 fn create_general_tab() -> GeneralTabWidgets {
@@ -80,8 +80,21 @@ fn create_general_tab() -> GeneralTabWidgets {
     );
     project_directory_text.set_align(Align::Left);
     project_directory_text.set_buffer(TextBuffer::default());
-    let project_directory_chooser_button =
+    let mut project_directory_chooser_button =
         Button::new(30 + 270 + 10, 60 + project_label_offset, 60, 30, "Choose");
+
+    let project_directory_text_clone = project_directory_text.clone();
+    project_directory_chooser_button.set_callback(move |_| {
+        let mut folder_chooser = dialog::NativeFileChooser::new(dialog::NativeFileChooserType::BrowseDir);
+        folder_chooser.show();
+
+        let folder_name = folder_chooser.filename();
+        if !folder_name.is_dir() {
+            return;
+        }
+
+        project_directory_text_clone.buffer().expect("General Preferences: Where's the TextBuffer?").set_text(folder_name.to_str().unwrap());
+    });
 
     project_widgets_group.end();
 
@@ -89,7 +102,6 @@ fn create_general_tab() -> GeneralTabWidgets {
 
     GeneralTabWidgets {
         project_directory_text,
-        project_directory_chooser_button,
     }
 }
 
@@ -188,7 +200,6 @@ impl PreferencesDialog {
             window: preferences_window,
 
             project_directory_text: general_tab.project_directory_text,
-            project_directory_chooser_button: general_tab.project_directory_chooser_button,
 
             audio_output_name: audio_tab.audio_output_name,
             audio_input_name: audio_tab.audio_input_name,
@@ -279,6 +290,10 @@ impl PreferencesDialog {
             return;
         }
 
+        let chosen_audio_output_dir = self.project_directory_text.buffer().unwrap().text();
+        let audio_output_dir = PathBuf::from(chosen_audio_output_dir);
+        session.set_project_directory(audio_output_dir);
+        
         self.save_audio_preferences(session);
     }
 }
