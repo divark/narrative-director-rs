@@ -3,12 +3,13 @@ use std::path::PathBuf;
 use fltk::{
     app,
     button::Button,
+    dialog,
     enums::{Align, Font, FrameType},
     group::{Group, Tabs},
     misc::InputChoice,
     prelude::{DisplayExt, GroupExt, WidgetBase, WidgetExt, WindowExt},
     text::{TextBuffer, TextDisplay},
-    window::Window, dialog,
+    window::Window,
 };
 
 use crate::{
@@ -85,7 +86,8 @@ fn create_general_tab() -> GeneralTabWidgets {
 
     let project_directory_text_clone = project_directory_text.clone();
     project_directory_chooser_button.set_callback(move |_| {
-        let mut folder_chooser = dialog::NativeFileChooser::new(dialog::NativeFileChooserType::BrowseDir);
+        let mut folder_chooser =
+            dialog::NativeFileChooser::new(dialog::NativeFileChooserType::BrowseDir);
         folder_chooser.show();
 
         let folder_name = folder_chooser.filename();
@@ -93,7 +95,10 @@ fn create_general_tab() -> GeneralTabWidgets {
             return;
         }
 
-        project_directory_text_clone.buffer().expect("General Preferences: Where's the TextBuffer?").set_text(folder_name.to_str().unwrap());
+        project_directory_text_clone
+            .buffer()
+            .expect("General Preferences: Where's the TextBuffer?")
+            .set_text(folder_name.to_str().unwrap());
     });
 
     project_widgets_group.end();
@@ -293,7 +298,7 @@ impl PreferencesDialog {
         let chosen_audio_output_dir = self.project_directory_text.buffer().unwrap().text();
         let audio_output_dir = PathBuf::from(chosen_audio_output_dir);
         session.set_project_directory(audio_output_dir);
-        
+
         self.save_audio_preferences(session);
     }
 }
