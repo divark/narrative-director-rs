@@ -1,4 +1,7 @@
-use std::{cell::RefCell, path::PathBuf};
+use std::{
+    cell::RefCell,
+    path::{Path, PathBuf},
+};
 
 use fltk::{
     app::{self, App},
@@ -7,6 +10,7 @@ use fltk::{
     enums::{Align, FrameType, Shortcut},
     frame::Frame,
     group::{self, Flex},
+    image,
     menu::{self, MenuItem, SysMenuBar},
     prelude::*,
     text::{self, TextBuffer, TextDisplay},
@@ -105,6 +109,11 @@ impl MainApplication {
         main_window.show();
 
         main_window.size_range(640, 480, 0, 0);
+        let window_icon =
+            image::PngImage::load(Path::new("resources/images/icon.png").to_str().unwrap())
+                .expect("Could not load program icon.");
+        main_window.set_icon(Some(window_icon));
+        main_window.set_icon_label("Narrative Director");
 
         MainApplication {
             app,
