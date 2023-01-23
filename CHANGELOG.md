@@ -26,6 +26,7 @@
 - CI scripts to include FLTK dependencies.
 - Audio Preferences section of Preferences has been converted to use FLTK widgets.
 - General Preferences section of Preferences has been converted to use FLTK widgets.
+- README to include new screenshots of application and library usage.
 
 ### Fixed
 - Clippy suggestions for improved code quality.
