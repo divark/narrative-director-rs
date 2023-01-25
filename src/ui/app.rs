@@ -42,8 +42,8 @@ pub enum UIActions {
 
 pub struct ViewerWidgets {
     pub paragraph_view: TextDisplay,
-    pub next_button: RefCell<Button>,
-    pub prev_button: RefCell<Button>,
+    pub next_button: Button,
+    pub prev_button: Button,
 
     pub progress_counter: Button,
 }
@@ -64,8 +64,8 @@ pub struct MainUIWidgets {
     pub stop_button: Button,
     pub record_button: Button,
 
-    pub next_button: RefCell<Button>,
-    pub prev_button: RefCell<Button>,
+    pub next_button: Button,
+    pub prev_button: Button,
 }
 
 pub struct MainApplication {
@@ -192,14 +192,12 @@ impl MainApplication {
                             .session
                             .as_ref()
                             .expect("Session should exist on playback.")
-                            .audio_output()
-                            .to_device();
+                            .audio_output();
 
                         self.media_io.play(output_device);
                     }
                     UIActions::Stop => {
                         self.media_io.stop();
-                        self.paragraph_viewer.toggle_nav_buttons();
                     }
                     UIActions::Record => {
                         let input_device = self
@@ -348,9 +346,9 @@ fn create_widget_layout(
 
     let navigation_pack = Flex::default_fill().with_type(group::FlexType::Row);
 
-    let mut previous_button = Button::default().with_label("<");
-    previous_button.emit(*action_broadcaster, UIActions::Previous);
-    previous_button.deactivate();
+    let mut prev_button = Button::default().with_label("<");
+    prev_button.emit(*action_broadcaster, UIActions::Previous);
+    prev_button.deactivate();
 
     let audio_progress_text = Frame::default()
         .with_label("00:00:00/00:00:00")
@@ -362,9 +360,6 @@ fn create_widget_layout(
 
     navigation_pack.end();
     flex_column_layout.set_size(&navigation_pack, 30);
-
-    let next_button = RefCell::new(next_button);
-    let prev_button = RefCell::new(previous_button);
 
     // Playback Widgets
     let playback_pack = Flex::default_fill().with_type(group::FlexType::Row);

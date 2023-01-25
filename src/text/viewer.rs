@@ -56,8 +56,8 @@ pub struct ParagraphViewer {
     paragraph_num: usize,
 
     paragraph_view: TextDisplay,
-    next_button: RefCell<Button>,
-    prev_button: RefCell<Button>,
+    next_button: Button,
+    prev_button: Button,
     progress_counter: Counter,
 }
 
@@ -76,15 +76,15 @@ impl ParagraphViewer {
 
     pub fn toggle_nav_buttons(&mut self) {
         if self.progress_counter.at_beginning() {
-            self.prev_button.get_mut().deactivate();
+            self.prev_button.deactivate();
         } else {
-            self.prev_button.get_mut().activate();
+            self.prev_button.activate();
         }
 
         if self.progress_counter.at_end() {
-            self.next_button.get_mut().deactivate();
+            self.next_button.deactivate();
         } else {
-            self.next_button.get_mut().activate();
+            self.next_button.activate();
         }
     }
 
@@ -273,8 +273,8 @@ mod tests {
             &get_text_from_viewer(&paragraph_viewer.paragraph_view),
             SECOND_PARAGRAPH
         );
-        assert!(!paragraph_viewer.next_button.take().active());
-        assert!(paragraph_viewer.prev_button.take().active());
+        assert!(!paragraph_viewer.next_button.active());
+        assert!(paragraph_viewer.prev_button.active());
     }
 
     #[test]
@@ -296,8 +296,8 @@ mod tests {
         assert_eq!(1, paragraph_viewer.num_paragraphs());
 
         paragraph_viewer.show_paragraph_at(0);
-        assert!(!paragraph_viewer.next_button.take().active());
-        assert!(!paragraph_viewer.prev_button.take().active());
+        assert!(!paragraph_viewer.next_button.active());
+        assert!(!paragraph_viewer.prev_button.active());
 
         paragraph_viewer.show_next_paragraph();
         let expected_paragraph_num = 0;
@@ -313,8 +313,8 @@ mod tests {
         assert_eq!(MANY_PARAGRAPHS_LEN, paragraph_viewer.num_paragraphs());
 
         paragraph_viewer.show_paragraph_at(0);
-        assert!(paragraph_viewer.next_button.take().active());
-        assert!(!paragraph_viewer.prev_button.take().active());
+        assert!(paragraph_viewer.next_button.active());
+        assert!(!paragraph_viewer.prev_button.active());
 
         paragraph_viewer.show_next_paragraph();
         let expected_paragraph_num = 1;
@@ -346,8 +346,8 @@ mod tests {
         assert_eq!(1, paragraph_viewer.num_paragraphs());
 
         paragraph_viewer.show_paragraph_at(0);
-        assert!(!paragraph_viewer.next_button.take().active());
-        assert!(!paragraph_viewer.prev_button.take().active());
+        assert!(!paragraph_viewer.next_button.active());
+        assert!(!paragraph_viewer.prev_button.active());
 
         paragraph_viewer.show_previous_paragraph();
         let expected_paragraph_num = 0;
@@ -363,8 +363,8 @@ mod tests {
         assert_eq!(MANY_PARAGRAPHS_LEN, paragraph_viewer.num_paragraphs());
 
         paragraph_viewer.show_paragraph_at(MANY_PARAGRAPHS_LEN - 1);
-        assert!(!paragraph_viewer.next_button.take().active());
-        assert!(paragraph_viewer.prev_button.take().active());
+        assert!(!paragraph_viewer.next_button.active());
+        assert!(paragraph_viewer.prev_button.active());
 
         paragraph_viewer.show_previous_paragraph();
         let expected_paragraph_num = MANY_PARAGRAPHS_LEN - 2;

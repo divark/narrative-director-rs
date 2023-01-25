@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::{Arc, RwLock};
 
 use fltk::app;
 use fltk::frame::Frame;
@@ -70,18 +71,16 @@ impl PlaybackWidget {
 
     pub fn update_playback(&mut self) {
         let current_pos = self.progress_bar.value() as usize;
-        let mut total = self.progress_bar.maximum() as usize;
-        if total == 0 {
-            total = 1;
-        }
+        let total = self.progress_bar.maximum() as usize;
 
         let playback_time = format!(
             "{}/{}",
             to_hh_mm_ss_str(current_pos),
-            to_hh_mm_ss_str(total - 1)
+            to_hh_mm_ss_str(total)
         );
 
         self.time_label.set_label(&playback_time);
+        app::awake();
     }
 
     pub fn update_recording(&mut self) {
@@ -91,10 +90,12 @@ impl PlaybackWidget {
         let playback_time = format!("{}/{}", to_hh_mm_ss_str(total), to_hh_mm_ss_str(total));
 
         self.time_label.set_label(&playback_time);
+        app::awake();
     }
 
     pub fn reset(&mut self) {
         self.progress_bar.set_bounds(0.0, 0.0);
+        self.clear_notification();
     }
 
     pub fn notify_recording_complete(&mut self, filepath: &str) {
@@ -102,143 +103,194 @@ impl PlaybackWidget {
             .buffer()
             .unwrap()
             .set_text(&format!("Recording complete: {}", filepath));
+        app::awake();
     }
 
     pub fn clear_notification(&mut self) {
         self.status_bar.buffer().unwrap().set_text("");
+        app::awake();
     }
 }
 
+#[derive(PartialEq, Eq, Clone, Copy)]
+enum MediaStates {
+    Playing,
+    Paused,
+    Recording,
+
+    StoppedPlaying,
+    StoppedRecording,
+}
+
 pub struct Media {
+    stream_updater: Sender<SenderMessages>,
+    media_state: Arc<RwLock<MediaStates>>,
+
     audio_location: Option<PathBuf>,
-    stream_updater: Option<Sender<SenderMessages>>,
-
-    nav_button_state: (bool, bool),
-
-    playback_updater_widget: PlaybackWidget,
-    main_ui_widgets: MainUIWidgets,
 }
 
 enum SenderMessages {
-    Clear,
     Load(usize),
+    Clear,
 
-    Play,
-    Playing(usize),
-    Pause(usize),
-
-    Record,
-    Recording(usize),
-
-    Stop(PathBuf),
+    Play(AudioOutput, PathBuf),
+    Record(AudioInput, PathBuf),
 }
 
-fn attach_progress_tracking(
-    rx: Receiver<SenderMessages>,
+fn spawn_media_ui_modifier(
+    media_state: Arc<RwLock<MediaStates>>,
+    msg_receiver: Receiver<SenderMessages>,
     mut playback_widget: PlaybackWidget,
-    mut widgets: MainUIWidgets,
+    mut ui_widgets: MainUIWidgets,
 ) {
     thread::spawn(move || {
-        while let Ok(sender_msg) = rx.recv() {
+        let mut prev_button_active = false;
+        let mut next_button_active = false;
+
+        while let Ok(sender_msg) = msg_receiver.recv() {
             match sender_msg {
-                SenderMessages::Clear => {
-                    playback_widget.reset();
+                SenderMessages::Play(output_device, audio_file_path) => {
+                    prev_button_active = ui_widgets.prev_button.active();
+                    ui_widgets.prev_button.deactivate();
+                    next_button_active = ui_widgets.next_button.active();
+                    ui_widgets.next_button.deactivate();
 
-                    widgets.play_button.deactivate();
-                    widgets.stop_button.deactivate();
+                    ui_widgets.play_button.set_label("Pause");
+                    ui_widgets.record_button.deactivate();
+                    ui_widgets.stop_button.activate();
+                    ui_widgets.open_menu_item.deactivate();
 
-                    widgets.record_button.activate();
+                    let mut current_pos_secs = playback_widget.current();
+                    let total_secs = playback_widget.total();
+                    let (audio, _) = output_stream_from(
+                        output_device.to_device(),
+                        current_pos_secs,
+                        audio_file_path,
+                    )
+                    .expect("Could not start playing audio.");
 
-                    playback_widget.update_playback();
-                }
-                SenderMessages::Load(length) => {
-                    playback_widget.set_current(0);
-                    playback_widget.set_total(length);
-
-                    widgets.play_button.activate();
-                    widgets.stop_button.deactivate();
-
-                    widgets.record_button.activate();
-
-                    playback_widget.update_playback();
-                }
-                SenderMessages::Play => {
-                    widgets.open_menu_item.deactivate();
-
-                    widgets.play_button.set_label("Pause");
-                    widgets.record_button.deactivate();
-                    widgets.stop_button.activate();
-
-                    widgets.next_button.get_mut().deactivate();
-                    widgets.prev_button.get_mut().deactivate();
-                }
-                SenderMessages::Playing(current_pos_secs) => {
-                    if widgets.play_button.active() && widgets.play_button.label() == "Pause" {
+                    while *media_state
+                        .read()
+                        .expect("Could not check for playing state")
+                        == MediaStates::Playing
+                        && current_pos_secs < total_secs
+                    {
+                        thread::sleep(Duration::from_secs(1));
+                        current_pos_secs += 1;
                         playback_widget.set_current(current_pos_secs);
+                        playback_widget.update_playback();
+
+                        if current_pos_secs == total_secs {
+                            *media_state.write().expect(
+                                "Could not change state to stoppedplaying on reaching duration",
+                            ) = MediaStates::StoppedPlaying;
+                        }
+                    }
+
+                    let current_state = *media_state
+                        .read()
+                        .expect("Could not check whether paused or stopped on playback.");
+                    if current_state == MediaStates::Paused {
+                        ui_widgets.play_button.set_label("Play");
+                    } else if current_state == MediaStates::StoppedPlaying {
+                        ui_widgets.play_button.set_label("Play");
+                        ui_widgets.record_button.activate();
+                        ui_widgets.stop_button.deactivate();
+                        ui_widgets.open_menu_item.activate();
+
+                        if prev_button_active {
+                            ui_widgets.prev_button.activate();
+                        }
+
+                        if next_button_active {
+                            ui_widgets.next_button.activate();
+                        }
+
+                        playback_widget.set_current(0);
                         playback_widget.update_playback();
                     }
                 }
-                SenderMessages::Pause(pause_pos_secs) => {
-                    playback_widget.set_current(pause_pos_secs);
-                    playback_widget.update_playback();
+                SenderMessages::Record(input_device, new_audio_file_path) => {
+                    prev_button_active = ui_widgets.prev_button.active();
+                    ui_widgets.prev_button.deactivate();
+                    next_button_active = ui_widgets.next_button.active();
+                    ui_widgets.next_button.deactivate();
 
-                    if widgets.play_button.label() == "Pause" {
-                        widgets.play_button.set_label("Play");
-                        break;
+                    ui_widgets.open_menu_item.deactivate();
+                    ui_widgets.play_button.deactivate();
+                    ui_widgets.stop_button.activate();
+                    ui_widgets.record_button.deactivate();
+
+                    let recording_status = input_stream_from(
+                        input_device.to_device(),
+                        input_device.config(),
+                        new_audio_file_path.clone(),
+                    );
+                    if recording_status.is_err() {
+                        continue;
                     }
-                }
-                SenderMessages::Record => {
-                    widgets.open_menu_item.deactivate();
 
-                    widgets.play_button.deactivate();
-                    widgets.record_button.deactivate();
-                    widgets.stop_button.activate();
+                    let _recording_stream = recording_status.expect("Could not start recording.");
 
-                    widgets.next_button.get_mut().deactivate();
-                    widgets.prev_button.get_mut().deactivate();
-                }
-                SenderMessages::Recording(current_pos_secs) => {
-                    if !widgets.record_button.active() {
+                    let mut current_pos_secs = 0;
+                    while *media_state
+                        .read()
+                        .expect("Could not check if in recording state.")
+                        == MediaStates::Recording
+                    {
+                        thread::sleep(Duration::from_secs(1));
+                        current_pos_secs += 1;
+
                         playback_widget.set_current(current_pos_secs);
                         playback_widget.set_total(current_pos_secs);
                         playback_widget.update_recording();
                     }
-                }
-                SenderMessages::Stop(recording_name) => {
-                    widgets.open_menu_item.activate();
 
-                    let was_recording = !widgets.play_button.active();
-                    widgets.play_button.set_label("Play");
-                    widgets.play_button.activate();
-                    widgets.record_button.activate();
-                    widgets.stop_button.deactivate();
+                    // NOTE: Pausing is not currently supported, so the state should only be in StoppedRecording.
+                    let current_state = *media_state
+                        .read()
+                        .expect("Could not check if in StoppedRecording state.");
+                    assert!(current_state == MediaStates::StoppedRecording);
 
-                    let total_pos = playback_widget.total();
-
-                    // Inform about recording completion via Statusbar.
-                    if was_recording {
-                        playback_widget.notify_recording_complete(recording_name.to_str().unwrap());
-
-                        let (tx, rx) = mpsc::channel();
-                        thread::spawn(move || {
-                            thread::sleep(Duration::from_secs(10));
-                            let _send_status = tx.send(0);
-                        });
-
-                        let mut playback_widgets_clone = playback_widget.clone();
-                        thread::spawn(move || {
-                            if rx.recv().is_ok() {
-                                playback_widgets_clone.clear_notification();
-                                app::awake();
-                            }
-                        });
-
-                        // WORKAROUND: When finished recording, the total time
-                        // is always off by one. Hence, this is in place for now.
-                        playback_widget.set_total(total_pos + 1);
+                    if prev_button_active {
+                        ui_widgets.prev_button.activate();
                     }
 
+                    if next_button_active {
+                        ui_widgets.next_button.activate();
+                    }
+
+                    ui_widgets.open_menu_item.activate();
+                    ui_widgets.play_button.activate();
+                    ui_widgets.stop_button.deactivate();
+                    ui_widgets.record_button.activate();
+
+                    playback_widget
+                        .notify_recording_complete(new_audio_file_path.to_str().unwrap());
                     playback_widget.set_current(0);
+                    playback_widget.update_playback();
+                }
+                SenderMessages::Load(length) => {
+                    playback_widget.clear_notification();
+
+                    playback_widget.set_current(0);
+                    playback_widget.set_total(length);
+
+                    ui_widgets.play_button.activate();
+                    ui_widgets.stop_button.deactivate();
+
+                    ui_widgets.record_button.activate();
+
+                    playback_widget.update_playback();
+                }
+                SenderMessages::Clear => {
+                    playback_widget.reset();
+
+                    ui_widgets.play_button.deactivate();
+                    ui_widgets.stop_button.deactivate();
+
+                    ui_widgets.record_button.activate();
+
                     playback_widget.update_playback();
                 }
             }
@@ -255,13 +307,16 @@ impl Media {
             media_widgets.status_bar,
         );
 
-        Media {
-            audio_location: None,
-            stream_updater: None,
+        let media_state = Arc::new(RwLock::new(MediaStates::StoppedPlaying));
 
-            nav_button_state: (false, false),
-            playback_updater_widget: playback_widget,
-            main_ui_widgets: ui_widgets,
+        let (stream_updater, rx) = mpsc::channel();
+        spawn_media_ui_modifier(media_state.clone(), rx, playback_widget, ui_widgets);
+
+        Media {
+            stream_updater,
+            media_state,
+
+            audio_location: None,
         }
     }
 
@@ -273,160 +328,84 @@ impl Media {
             .default_output_device()
             .expect("Unable to get default output device.");
 
-        let (tx, rx) = mpsc::channel();
-        attach_progress_tracking(
-            rx,
-            self.playback_updater_widget.clone(),
-            self.main_ui_widgets.clone(),
-        );
-        self.stream_updater = Some(tx.clone());
-
         match output_stream_from(default_output_device, 0, audio_file_location) {
             Ok((_, length)) => {
-                tx.send(SenderMessages::Load(length))
+                self.stream_updater
+                    .send(SenderMessages::Load(length))
                     .expect("Load: Could not load current audio file.");
-                self.nav_button_state = (
-                    self.main_ui_widgets.next_button.get_mut().active(),
-                    self.main_ui_widgets.prev_button.get_mut().active(),
-                );
             }
             Err(_) => {
-                tx.send(SenderMessages::Clear)
+                self.stream_updater
+                    .send(SenderMessages::Clear)
                     .expect("Load: Could not reset UI.");
             }
         }
     }
 
-    pub fn play(&mut self, output_device: Device) {
-        let mut current_pos_secs = self.playback_updater_widget.current();
-
-        if self.main_ui_widgets.play_button.label() == "Pause" {
-            self.pause_at(current_pos_secs);
+    pub fn play(&mut self, output_device: &AudioOutput) {
+        let current_state = *self
+            .media_state
+            .read()
+            .expect("Could not check state for pausing playback");
+        if current_state == MediaStates::Playing {
+            *self
+                .media_state
+                .write()
+                .expect("Could not acquire lock to change state to paused") = MediaStates::Paused;
             return;
         }
 
-        let (sender, rx) = mpsc::channel();
-        attach_progress_tracking(
-            rx,
-            self.playback_updater_widget.clone(),
-            self.main_ui_widgets.clone(),
-        );
-        self.stream_updater = Some(sender.clone());
-
-        let audio_location = self.audio_location.as_ref().unwrap().clone();
-
-        thread::spawn(move || {
-            let play_status = sender.send(SenderMessages::Play);
-            if play_status.is_err() {
-                return;
-            }
-
-            let found_stream =
-                output_stream_from(output_device, current_pos_secs, audio_location.clone());
-            if let Err(ref msg) = found_stream {
-                eprintln!("Playback error: {}", msg);
-                return;
-            }
-
-            let (_stream, duration_secs) = found_stream.unwrap();
-
-            while current_pos_secs <= duration_secs {
-                thread::sleep(Duration::from_secs(1));
-
-                let send_result = sender.send(SenderMessages::Playing(current_pos_secs));
-                if send_result.is_err() {
-                    return;
-                }
-
-                current_pos_secs += 1;
-            }
-
-            sender
-                .send(SenderMessages::Stop(audio_location))
-                .expect("Play: Could not stop recording.");
-        });
+        *self
+            .media_state
+            .write()
+            .expect("Could not acquire lock to change state to playing") = MediaStates::Playing;
+        self.stream_updater.send(SenderMessages::Play(
+            output_device.clone(),
+            self.audio_location.as_ref().unwrap().clone(),
+        ));
     }
 
     pub fn pause_at(&mut self, current_pos_secs: usize) {
-        let sender = self.stream_updater.take().unwrap_or_else(|| {
-            let (sender, rx) = mpsc::channel();
-            attach_progress_tracking(
-                rx,
-                self.playback_updater_widget.clone(),
-                self.main_ui_widgets.clone(),
-            );
-            self.stream_updater = Some(sender.clone());
-
-            sender
-        });
-
-        thread::spawn(move || {
-            sender
-                .send(SenderMessages::Pause(current_pos_secs))
-                .expect("Pause_at: Could not pause the audio.");
-        });
+        *self
+            .media_state
+            .write()
+            .expect("Could not acquire lock to change state to paused") = MediaStates::Paused;
     }
 
     pub fn record(&mut self, input_device: &AudioInput) {
-        let (sender, rx) = mpsc::channel();
-        attach_progress_tracking(
-            rx,
-            self.playback_updater_widget.clone(),
-            self.main_ui_widgets.clone(),
-        );
-        self.stream_updater = Some(sender.clone());
-
-        let audio_location = self.audio_location.as_ref().unwrap().clone();
-        let cpal_input_device = input_device.to_device();
-        let cpal_input_config = input_device.config();
-
-        thread::spawn(move || {
-            let input_stream =
-                input_stream_from(cpal_input_device, cpal_input_config, audio_location);
-            if input_stream.is_err() {
-                return;
-            }
-
-            let _stream = input_stream.unwrap();
-            sender
-                .send(SenderMessages::Record)
-                .expect("Record: Could not start recording.");
-
-            let mut current_pos_secs = 0;
-            loop {
-                thread::sleep(Duration::from_secs(1));
-
-                let send_result = sender.send(SenderMessages::Recording(current_pos_secs));
-                if send_result.is_err() {
-                    return;
-                }
-
-                current_pos_secs += 1;
-            }
-        });
+        *self
+            .media_state
+            .write()
+            .expect("Could not acquire lock to change state to recording") = MediaStates::Recording;
+        self.stream_updater.send(SenderMessages::Record(
+            input_device.clone(),
+            self.audio_location.as_ref().unwrap().clone(),
+        ));
     }
 
     /// Stops the current playback or recording, reverting the playback widgets
     /// back to normal.
     pub fn stop(&mut self) {
-        let sender = self.stream_updater.take().unwrap_or_else(|| {
-            let (sender, rx) = mpsc::channel();
-            attach_progress_tracking(
-                rx,
-                self.playback_updater_widget.clone(),
-                self.main_ui_widgets.clone(),
-            );
-            sender
-        });
-
-        let audio_location = self.audio_location.as_ref().unwrap().clone();
-        sender
-            .send(SenderMessages::Stop(audio_location))
-            .expect("Stop: Could not stop recording.");
+        let current_state = *self
+            .media_state
+            .read()
+            .expect("Could not check state for stopping playback or recording");
+        if current_state == MediaStates::Playing {
+            *self
+                .media_state
+                .write()
+                .expect("Could not change state to StoppedPlaying") = MediaStates::StoppedPlaying;
+        } else if current_state == MediaStates::Recording {
+            *self
+                .media_state
+                .write()
+                .expect("Could not change state to StoppedRecording") =
+                MediaStates::StoppedRecording;
+        }
     }
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub struct AudioOutput {
     output_device_name: String,
 }

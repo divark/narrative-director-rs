@@ -30,6 +30,7 @@
 
 ### Fixed
 - Clippy suggestions for improved code quality.
+- Not being able to stop recording or playing, even if UI suggested otherwise.
 
 ### Removed
 - Relm dependency for GUI framework.
