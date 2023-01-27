@@ -342,6 +342,10 @@ fn create_widget_layout(
     // Text Navigation and Audio Progress
     let mut progress_bar = HorNiceSlider::default();
     progress_bar.set_bounds(0.0, 0.0);
+    let broadcaster_copy = action_broadcaster.clone();
+    progress_bar.set_callback(move |slider_location| {
+        broadcaster_copy.send(UIActions::AudioSkip(slider_location.value() as usize));
+    });
     flex_column_layout.set_size(&progress_bar, 30);
 
     let navigation_pack = Flex::default_fill().with_type(group::FlexType::Row);

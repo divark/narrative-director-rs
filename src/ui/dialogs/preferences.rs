@@ -13,7 +13,7 @@ use fltk::{
 };
 
 use crate::{
-    media::io::{input_device_names, output_device_names},
+    media::io::{input_device_names, output_device_names, AudioInput},
     sessions::session::Session,
     ui::common::shift_right_by_label,
 };
@@ -41,6 +41,7 @@ where
         .unwrap_or(0);
     input.set_value_index(choice_idx as i32);
 }
+
 pub struct PreferencesDialog {
     window: Window,
 
@@ -182,7 +183,7 @@ impl PreferencesDialog {
         let preference_topics = Tabs::new(10, 10, 380, 280, "");
 
         let general_tab = create_general_tab();
-        let audio_tab = create_audio_tab();
+        let mut audio_tab = create_audio_tab();
 
         preference_topics.end();
 
@@ -197,6 +198,34 @@ impl PreferencesDialog {
         save_button.set_callback(move |button| {
             button.deactivate();
             preferences_window_clone.hide();
+        });
+
+        let mut sample_rate_input = audio_tab.audio_input_sample_rate.clone();
+        let mut channels_input = audio_tab.audio_input_channels.clone();
+
+        // It's important to not bring over invalid sample rates and
+        // channels from other chosen input devices, hence a reason
+        // to make it repopulate and highlight the default choices for
+        // the input device.
+        audio_tab.audio_input_name.set_callback(move |device_name| {
+            let mut audio_input = AudioInput::new();
+            audio_input.set_device_name(device_name.label());
+
+            let audio_input_sample_rates = audio_input.sample_rates();
+            repopulate_input_choices(&mut sample_rate_input, &audio_input_sample_rates);
+            set_active_in_input_choices(
+                &mut sample_rate_input,
+                &audio_input_sample_rates,
+                &audio_input.sample_rate(),
+            );
+
+            let audio_input_channels = audio_input.channels();
+            repopulate_input_choices(&mut channels_input, &audio_input_channels);
+            set_active_in_input_choices(
+                &mut channels_input,
+                &audio_input_channels,
+                &audio_input.channel(),
+            );
         });
 
         preferences_window.end();

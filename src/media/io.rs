@@ -135,6 +135,8 @@ enum SenderMessages {
 
     Play(AudioOutput, PathBuf),
     Record(AudioInput, PathBuf),
+    PauseAt(usize),
+    StopIfPaused,
 }
 
 fn spawn_media_ui_modifier(
@@ -150,19 +152,25 @@ fn spawn_media_ui_modifier(
         while let Ok(sender_msg) = msg_receiver.recv() {
             match sender_msg {
                 SenderMessages::Play(output_device, audio_file_path) => {
-                    prev_button_active = ui_widgets.prev_button.active();
-                    ui_widgets.prev_button.deactivate();
-                    next_button_active = ui_widgets.next_button.active();
-                    ui_widgets.next_button.deactivate();
+                    // There's no way we would be performing playback when there are no entries
+                    // seen in the Paragraph Viewer, so we want to capture if they were active
+                    // when we are in a valid situation looking at text.
+                    if ui_widgets.prev_button.active() || ui_widgets.next_button.active() {
+                        prev_button_active = ui_widgets.prev_button.active();
+                        ui_widgets.prev_button.deactivate();
+                        next_button_active = ui_widgets.next_button.active();
+                        ui_widgets.next_button.deactivate();
+                    }
 
                     ui_widgets.play_button.set_label("Pause");
                     ui_widgets.record_button.deactivate();
                     ui_widgets.stop_button.activate();
                     ui_widgets.open_menu_item.deactivate();
+                    app::awake();
 
                     let mut current_pos_secs = playback_widget.current();
                     let total_secs = playback_widget.total();
-                    let (audio, _) = output_stream_from(
+                    let (_audio, _) = output_stream_from(
                         output_device.to_device(),
                         current_pos_secs,
                         audio_file_path,
@@ -220,6 +228,7 @@ fn spawn_media_ui_modifier(
                     ui_widgets.play_button.deactivate();
                     ui_widgets.stop_button.activate();
                     ui_widgets.record_button.deactivate();
+                    app::awake();
 
                     let recording_status = input_stream_from(
                         input_device.to_device(),
@@ -267,6 +276,27 @@ fn spawn_media_ui_modifier(
 
                     playback_widget
                         .notify_recording_complete(new_audio_file_path.to_str().unwrap());
+                    playback_widget.set_current(0);
+                    playback_widget.update_playback();
+                }
+                SenderMessages::PauseAt(current_pos_secs) => {
+                    playback_widget.set_current(current_pos_secs);
+                    playback_widget.update_playback();
+                }
+                SenderMessages::StopIfPaused => {
+                    ui_widgets.play_button.set_label("Play");
+                    ui_widgets.record_button.activate();
+                    ui_widgets.stop_button.deactivate();
+                    ui_widgets.open_menu_item.activate();
+
+                    if prev_button_active {
+                        ui_widgets.prev_button.activate();
+                    }
+
+                    if next_button_active {
+                        ui_widgets.next_button.activate();
+                    }
+
                     playback_widget.set_current(0);
                     playback_widget.update_playback();
                 }
@@ -370,6 +400,8 @@ impl Media {
             .media_state
             .write()
             .expect("Could not acquire lock to change state to paused") = MediaStates::Paused;
+        self.stream_updater
+            .send(SenderMessages::PauseAt(current_pos_secs));
     }
 
     pub fn record(&mut self, input_device: &AudioInput) {
@@ -401,6 +433,12 @@ impl Media {
                 .write()
                 .expect("Could not change state to StoppedRecording") =
                 MediaStates::StoppedRecording;
+        } else if current_state == MediaStates::Paused {
+            *self
+                .media_state
+                .write()
+                .expect("Could not change state to StoppedPlaying") = MediaStates::StoppedPlaying;
+            self.stream_updater.send(SenderMessages::StopIfPaused);
         }
     }
 }
