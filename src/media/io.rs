@@ -37,7 +37,7 @@ fn to_hh_mm_ss_str(secs: usize) -> String {
     let minutes = (seconds / 60) % 60;
     let hours = minutes / 60;
 
-    format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
+    format!("{hours:02}:{minutes:02}:{seconds:02}")
 }
 
 impl PlaybackWidget {
@@ -102,7 +102,7 @@ impl PlaybackWidget {
         self.status_bar
             .buffer()
             .unwrap()
-            .set_text(&format!("Recording complete: {}", filepath));
+            .set_text(&format!("Recording complete: {filepath}"));
         app::awake();
     }
 
@@ -389,19 +389,31 @@ impl Media {
             .media_state
             .write()
             .expect("Could not acquire lock to change state to playing") = MediaStates::Playing;
-        self.stream_updater.send(SenderMessages::Play(
-            output_device.clone(),
-            self.audio_location.as_ref().unwrap().clone(),
-        ));
+        self.stream_updater
+            .send(SenderMessages::Play(
+                output_device.clone(),
+                self.audio_location.as_ref().unwrap().clone(),
+            ))
+            .expect("Could not communicate to thread to start playing");
     }
 
     pub fn pause_at(&mut self, current_pos_secs: usize) {
+        if *self
+            .media_state
+            .read()
+            .expect("Could not check if in recording state to prevent pausing")
+            == MediaStates::Recording
+        {
+            return;
+        }
+
         *self
             .media_state
             .write()
             .expect("Could not acquire lock to change state to paused") = MediaStates::Paused;
         self.stream_updater
-            .send(SenderMessages::PauseAt(current_pos_secs));
+            .send(SenderMessages::PauseAt(current_pos_secs))
+            .expect("Could not communicate to thread to pause playback");
     }
 
     pub fn record(&mut self, input_device: &AudioInput) {
@@ -409,10 +421,12 @@ impl Media {
             .media_state
             .write()
             .expect("Could not acquire lock to change state to recording") = MediaStates::Recording;
-        self.stream_updater.send(SenderMessages::Record(
-            input_device.clone(),
-            self.audio_location.as_ref().unwrap().clone(),
-        ));
+        self.stream_updater
+            .send(SenderMessages::Record(
+                input_device.clone(),
+                self.audio_location.as_ref().unwrap().clone(),
+            ))
+            .expect("Could not communicate to thread to start recording");
     }
 
     /// Stops the current playback or recording, reverting the playback widgets
@@ -438,7 +452,9 @@ impl Media {
                 .media_state
                 .write()
                 .expect("Could not change state to StoppedPlaying") = MediaStates::StoppedPlaying;
-            self.stream_updater.send(SenderMessages::StopIfPaused);
+            self.stream_updater
+                .send(SenderMessages::StopIfPaused)
+                .expect("Could not communicate to thread to stop if paused");
         }
     }
 }
@@ -725,7 +741,7 @@ fn output_stream_from(
             };
 
             output_device.build_output_stream(&stream_config, output_data_fn, |error| {
-                eprintln!("an error occurred on stream: {:?}", error)
+                eprintln!("an error occurred on stream: {error:?}")
             })?
         }
         (16, hound::SampleFormat::Int) => {
@@ -736,7 +752,7 @@ fn output_stream_from(
             };
 
             output_device.build_output_stream(&stream_config, output_data_fn, |error| {
-                eprintln!("an error occurred on stream: {:?}", error)
+                eprintln!("an error occurred on stream: {error:?}")
             })?
         }
         _ => {
@@ -808,7 +824,7 @@ fn input_stream_from(
     let mut writer = WavWriter::create(input_file, spec)?;
 
     let err_fn = move |err| {
-        eprintln!("IO Recording error: {}", err);
+        eprintln!("IO Recording error: {err}");
     };
 
     // Use the config to hook up the input (Some microphone) to the output (A file)

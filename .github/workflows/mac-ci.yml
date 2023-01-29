@@ -14,8 +14,6 @@ jobs:
     runs-on: macOS-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Install gtk3 and dependencies.
-        run: brew install fltk
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1

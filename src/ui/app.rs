@@ -1,7 +1,4 @@
-use std::{
-    cell::RefCell,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use fltk::{
     app::{self, App},
@@ -342,7 +339,7 @@ fn create_widget_layout(
     // Text Navigation and Audio Progress
     let mut progress_bar = HorNiceSlider::default();
     progress_bar.set_bounds(0.0, 0.0);
-    let broadcaster_copy = action_broadcaster.clone();
+    let broadcaster_copy = *action_broadcaster;
     progress_bar.set_callback(move |slider_location| {
         broadcaster_copy.send(UIActions::AudioSkip(slider_location.value() as usize));
     });

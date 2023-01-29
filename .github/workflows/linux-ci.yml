@@ -14,21 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Install fltk and dependencies.
+      - name: Install audio dependency.
         run: |
           sudo apt update
-          sudo apt install -y \
-            fltk1.3-dev \
-            libx11-dev \
-            libxext-dev \
-            libxft-dev \
-            libxinerama-dev \
-            libxcursor-dev \
-            libxrender-dev \
-            libxfixes-dev \
-            libpango1.0-dev \
-            libgl1-mesa-dev \
-            libglu1-mesa-dev
+          sudo apt install -y libasound2-dev
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1

@@ -15,7 +15,6 @@ use fltk::{
 use crate::{
     media::io::{input_device_names, output_device_names, AudioInput},
     sessions::session::Session,
-    ui::common::shift_right_by_label,
 };
 
 /// Clears, then adds all choices into the given input.
