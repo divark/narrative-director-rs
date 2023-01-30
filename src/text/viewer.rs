@@ -1,20 +1,22 @@
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
-use std::rc::Rc;
 
-use gtk::prelude::*;
-use gtk::{Button, Label, TextView};
+use fltk::button::Button;
+use fltk::prelude::{DisplayExt, WidgetExt};
+use fltk::text::TextDisplay;
+
+use crate::ui::app::ViewerWidgets;
 
 struct Counter {
-    progress_label: Label,
+    progress_label: Button,
 
     current_pos: usize,
     total_elements: usize,
 }
 
 impl Counter {
-    pub fn new(progress_label: Label) -> Self {
+    pub fn new(progress_label: Button) -> Self {
         Counter {
             progress_label,
             current_pos: 0,
@@ -36,7 +38,7 @@ impl Counter {
         }
 
         self.progress_label
-            .set_text(format!("{}/{}", self.current_pos, self.total_elements).as_str());
+            .set_label(format!("{}/{}", self.current_pos, self.total_elements).as_str());
     }
 
     pub fn at_beginning(&self) -> bool {
@@ -48,21 +50,13 @@ impl Counter {
     }
 }
 
-pub struct ViewerWidgets {
-    pub paragraph_view: TextView,
-    pub next_button: Rc<Button>,
-    pub prev_button: Rc<Button>,
-
-    pub progress_counter: Label,
-}
-
 pub struct ParagraphViewer {
     paragraphs: Vec<String>,
     paragraph_num: usize,
 
-    paragraph_view: TextView,
-    next_button: Rc<Button>,
-    prev_button: Rc<Button>,
+    paragraph_view: TextDisplay,
+    next_button: Button,
+    prev_button: Button,
     progress_counter: Counter,
 }
 
@@ -79,17 +73,17 @@ impl ParagraphViewer {
         }
     }
 
-    fn toggle_nav_buttons(&self) {
+    pub fn toggle_nav_buttons(&mut self) {
         if self.progress_counter.at_beginning() {
-            self.prev_button.set_sensitive(false);
+            self.prev_button.deactivate();
         } else {
-            self.prev_button.set_sensitive(true);
+            self.prev_button.activate();
         }
 
         if self.progress_counter.at_end() {
-            self.next_button.set_sensitive(false);
+            self.next_button.deactivate();
         } else {
-            self.next_button.set_sensitive(true);
+            self.next_button.activate();
         }
     }
 
@@ -183,8 +177,9 @@ impl ParagraphViewer {
 
 #[cfg(test)]
 mod tests {
+    use crate::ui::app::MainApplication;
+
     use super::*;
-    use gtk::Builder;
     use std::io::Write;
     use tempfile::NamedTempFile;
 
@@ -193,45 +188,18 @@ mod tests {
 
     const MANY_PARAGRAPHS_LEN: usize = 2;
 
-    fn get_viewer_widgets() -> ViewerWidgets {
-        gtk::init().expect("Unable to initialize gtk.");
-
-        let glade_src = include_str!("../ui/main-window.glade");
-        let builder = Builder::from_string(glade_src);
-
-        let paragraph_view: TextView = builder.object("chunk_view_txtviewer").unwrap();
-
-        let prev_button: Rc<Button> = Rc::new(builder.object("prev_chunk_btn").unwrap());
-        let next_button: Rc<Button> = Rc::new(builder.object("next_chunk_btn").unwrap());
-
-        let text_progress_counter: Label = builder.object("chunk_position_lbl").unwrap();
-
-        ViewerWidgets {
-            paragraph_view,
-            next_button,
-            prev_button,
-            progress_counter: text_progress_counter,
-        }
-    }
-
     fn get_paragraph_viewer() -> ParagraphViewer {
-        let viewer_widgets = get_viewer_widgets();
+        let main_application = MainApplication::new();
 
-        ParagraphViewer::new(viewer_widgets)
+        main_application.paragraph_viewer
     }
 
-    fn get_text_from_viewer(parapgraph_view: &TextView) -> String {
+    fn get_text_from_viewer(parapgraph_view: &TextDisplay) -> String {
         let text_buffer = parapgraph_view
             .buffer()
             .expect("Could not fetch buffer from paragraph view.");
 
-        let start_iter = text_buffer.start_iter();
-        let end_iter = text_buffer.end_iter();
-
-        let text = text_buffer
-            .text(&start_iter, &end_iter, false)
-            .expect("Could not get text from paragraph view.");
-        text.to_string()
+        text_buffer.text()
     }
 
     fn get_file_one_paragraph() -> NamedTempFile {
@@ -304,8 +272,8 @@ mod tests {
             &get_text_from_viewer(&paragraph_viewer.paragraph_view),
             SECOND_PARAGRAPH
         );
-        assert!(!paragraph_viewer.next_button.is_sensitive());
-        assert!(paragraph_viewer.prev_button.is_sensitive());
+        assert!(!paragraph_viewer.next_button.active());
+        assert!(paragraph_viewer.prev_button.active());
     }
 
     #[test]
@@ -327,8 +295,8 @@ mod tests {
         assert_eq!(1, paragraph_viewer.num_paragraphs());
 
         paragraph_viewer.show_paragraph_at(0);
-        assert!(!paragraph_viewer.next_button.is_sensitive());
-        assert!(!paragraph_viewer.prev_button.is_sensitive());
+        assert!(!paragraph_viewer.next_button.active());
+        assert!(!paragraph_viewer.prev_button.active());
 
         paragraph_viewer.show_next_paragraph();
         let expected_paragraph_num = 0;
@@ -344,8 +312,8 @@ mod tests {
         assert_eq!(MANY_PARAGRAPHS_LEN, paragraph_viewer.num_paragraphs());
 
         paragraph_viewer.show_paragraph_at(0);
-        assert!(paragraph_viewer.next_button.is_sensitive());
-        assert!(!paragraph_viewer.prev_button.is_sensitive());
+        assert!(paragraph_viewer.next_button.active());
+        assert!(!paragraph_viewer.prev_button.active());
 
         paragraph_viewer.show_next_paragraph();
         let expected_paragraph_num = 1;
@@ -377,8 +345,8 @@ mod tests {
         assert_eq!(1, paragraph_viewer.num_paragraphs());
 
         paragraph_viewer.show_paragraph_at(0);
-        assert!(!paragraph_viewer.next_button.is_sensitive());
-        assert!(!paragraph_viewer.prev_button.is_sensitive());
+        assert!(!paragraph_viewer.next_button.active());
+        assert!(!paragraph_viewer.prev_button.active());
 
         paragraph_viewer.show_previous_paragraph();
         let expected_paragraph_num = 0;
@@ -394,8 +362,8 @@ mod tests {
         assert_eq!(MANY_PARAGRAPHS_LEN, paragraph_viewer.num_paragraphs());
 
         paragraph_viewer.show_paragraph_at(MANY_PARAGRAPHS_LEN - 1);
-        assert!(!paragraph_viewer.next_button.is_sensitive());
-        assert!(paragraph_viewer.prev_button.is_sensitive());
+        assert!(!paragraph_viewer.next_button.active());
+        assert!(paragraph_viewer.prev_button.active());
 
         paragraph_viewer.show_previous_paragraph();
         let expected_paragraph_num = MANY_PARAGRAPHS_LEN - 2;
