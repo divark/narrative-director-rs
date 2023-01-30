@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use fltk::{
     app::{self, App},
@@ -17,7 +17,10 @@ use fltk::{
 
 use crate::{media::io::Media, sessions::session::Session, text::viewer::ParagraphViewer};
 
-use super::dialogs::{about::AboutDialog, goto::GotoPrompt, preferences::PreferencesDialog};
+use super::{
+    common::get_icon_path,
+    dialogs::{about::AboutDialog, goto::GotoPrompt, preferences::PreferencesDialog},
+};
 
 #[derive(Copy, Clone)]
 pub enum UIActions {
@@ -106,9 +109,8 @@ impl MainApplication {
         main_window.show();
 
         main_window.size_range(640, 480, 0, 0);
-        let window_icon =
-            image::PngImage::load(Path::new("resources/images/icon.png").to_str().unwrap())
-                .expect("Could not load program icon.");
+        let window_icon = image::PngImage::load(get_icon_path().to_str().unwrap())
+            .expect("Could not load program icon.");
         main_window.set_icon(Some(window_icon));
         main_window.set_icon_label("Narrative Director");
 

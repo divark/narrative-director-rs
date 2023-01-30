@@ -4,7 +4,7 @@
 - This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - This project uses [ISO Standard](https://www.iso.org/iso-8601-date-and-time-format.html) date formatting
 
-## [Unreleased]
+## [0.1.0] - 2023-01-29
 ### Added
 - FLTK-RS as the new GUI framework.
 - Creation of Main Window UI in code.
@@ -32,6 +32,7 @@
 ### Fixed
 - Clippy suggestions for improved code quality.
 - Not being able to stop recording or playing, even if UI suggested otherwise.
+- Icon not being able to load on MacOS build.
 
 ### Removed
 - Relm dependency for GUI framework.
@@ -40,4 +41,5 @@
 - main-window UI file in favor of making UI in code.
 - Unit Testing in GitHub Workflow files, temporarily.
 
-[Unreleased]: https://github.com/divark/narrative-director-rs/compare/main..fltk-migration
+[Unreleased]: https://github.com/divark/narrative-director-rs/blob/main/CHANGELOG.md
+[0.1.0]: https://github.com/divark/narrative-director-rs/releases/tag/v0.1.0
