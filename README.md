@@ -37,3 +37,7 @@ addition to having an excuse to learn about writing GUI applications using [Rust
 
 ## License
 Narrative Director's code is distributed under the GPLv3 License, which can be viewed [here.](COPYING)
+
+## Credits
+Thank you to
+- [bevy_game_template](https://github.com/NiklasEi/bevy_game_template) for the release workflow and build files per OS.

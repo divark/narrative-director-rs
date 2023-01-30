@@ -14,6 +14,7 @@
 - Wireframe Diagram for General Preferences.
 - Mock Diagram for Audio Preferences.
 - Wireframe Diagram for Audio Preferences.
+- App icons for Windows and MacOS.
 
 ### Changed
 - About Dialog with description of program and icon.
@@ -37,5 +38,6 @@
 - GTK3-related dependencies.
 - Dialogs created in common.rs in favor of per-file declarations.
 - main-window UI file in favor of making UI in code.
+- Unit Testing in GitHub Workflow files, temporarily.
 
 [Unreleased]: https://github.com/divark/narrative-director-rs/compare/main..fltk-migration

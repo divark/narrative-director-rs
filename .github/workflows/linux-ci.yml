@@ -42,7 +42,10 @@ jobs:
         with:
           command: check
           
-      - name: Run headless test
-        uses: GabrielBB/xvfb-action@v1
-        with:
-          run: cargo test -- --test-threads=1
+      # NOTE: As of 01/29/22, GitHub Actions hangs on running a GUI test, as
+      # if it's in an infinite loop, so this is disabled for the time
+      # being.
+      # - name: Run headless test
+      #   uses: GabrielBB/xvfb-action@v1
+      #   with:
+      #     run: cargo test -- --test-threads=1
