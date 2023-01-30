@@ -13,19 +13,15 @@ jobs:
     name: Compile and Test
     runs-on: macOS-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
           toolchain: stable
-          override: true
       
       - name: Check Code
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
+        run: cargo check
       # NOTE: There is an NSException when running the tests with GUIs:
       #
       # 'Terminating app due to uncaught exception 'NSInternalInconsistencyException',

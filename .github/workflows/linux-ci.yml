@@ -13,7 +13,7 @@ jobs:
     name: Compile and Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install audio dependency.
         run: |
           sudo apt update
@@ -31,16 +31,12 @@ jobs:
             libasound2-dev
 
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
           toolchain: stable
-          override: true
       
       - name: Check Code
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
+        run: cargo check
           
       # NOTE: As of 01/29/22, GitHub Actions hangs on running a GUI test, as
       # if it's in an infinite loop, so this is disabled for the time
