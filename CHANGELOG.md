@@ -4,6 +4,17 @@
 - This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - This project uses [ISO Standard](https://www.iso.org/iso-8601-date-and-time-format.html) date formatting
 
+## [0.1.1] - 2023-01-30
+### Added
+- Permission to use Microphone in MacOS build.
+
+### Changed
+- Replaced action-rs with dtolnay/rust-toolchain for CI.
+- Updated actions/checkout to v3.
+
+### Fixed
+- Icon not being found in runtime.
+
 ## [0.1.0] - 2023-01-29
 ### Added
 - FLTK-RS as the new GUI framework.
@@ -43,3 +54,4 @@
 
 [Unreleased]: https://github.com/divark/narrative-director-rs/blob/main/CHANGELOG.md
 [0.1.0]: https://github.com/divark/narrative-director-rs/releases/tag/v0.1.0
+[0.1.1]: https://github.com/divark/narrative-director-rs/releases/tag/v0.1.1
