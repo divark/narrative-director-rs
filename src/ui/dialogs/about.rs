@@ -9,8 +9,6 @@ use fltk::{
     window::Window,
 };
 
-use crate::ui::common::get_icon_path;
-
 pub struct AboutDialog {
     about_window: Window,
 }
@@ -30,7 +28,8 @@ impl AboutDialog {
         let mut frame = Frame::default_fill().center_of_parent();
         frame.set_frame(FrameType::EngravedBox);
 
-        let mut logo = PngImage::load(get_icon_path().to_str().unwrap()).expect("Logo not found.");
+        let mut logo = PngImage::from_data(include_bytes!("../../../resources/images/icon.png"))
+            .expect("Logo not found.");
         logo.scale(200, 200, true, true);
         frame.set_image(Some(logo));
 
