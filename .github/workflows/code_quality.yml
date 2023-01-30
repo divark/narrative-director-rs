@@ -15,9 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Install gtk3 and dependencies.
+      - name: Install dependencies.
         run: |
           sudo apt update
           sudo apt install -y \
