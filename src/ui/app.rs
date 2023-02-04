@@ -10,7 +10,7 @@ use fltk::{
     image,
     menu::{self, MenuItem, SysMenuBar},
     prelude::*,
-    text::{self, TextBuffer, TextDisplay},
+    text::{self, TextBuffer, TextDisplay, WrapMode},
     valuator::HorNiceSlider,
     window::Window,
 };
@@ -335,6 +335,7 @@ fn create_widget_layout(
 
     let mut paragraph_viewer = TextDisplay::default();
     paragraph_viewer.set_buffer(viewer_text);
+    paragraph_viewer.wrap_mode(WrapMode::AtColumn, 0);
 
     // Text Navigation and Audio Progress
     let mut progress_bar = HorNiceSlider::default();

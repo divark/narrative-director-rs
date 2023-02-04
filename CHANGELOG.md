@@ -4,6 +4,10 @@
 - This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - This project uses [ISO Standard](https://www.iso.org/iso-8601-date-and-time-format.html) date formatting
 
+## Unreleased
+### Fixed
+- Text not wrapping.
+
 ## [0.1.1] - 2023-01-30
 ### Added
 - Permission to use Microphone in MacOS build.
