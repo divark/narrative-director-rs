@@ -14,7 +14,8 @@ use std::time::Duration;
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{
-    default_host, Device, SampleFormat, SampleRate, Stream, StreamConfig, SupportedStreamConfig,
+    default_host, Device, FromSample, SampleFormat, SampleRate, Stream, StreamConfig,
+    SupportedStreamConfig,
 };
 use hound::{WavReader, WavSpec, WavWriter};
 
@@ -740,9 +741,12 @@ fn output_stream_from(
                 }
             };
 
-            output_device.build_output_stream(&stream_config, output_data_fn, |error| {
-                eprintln!("an error occurred on stream: {error:?}")
-            })?
+            output_device.build_output_stream(
+                &stream_config,
+                output_data_fn,
+                |error| eprintln!("an error occurred on stream: {error:?}"),
+                None,
+            )?
         }
         (16, hound::SampleFormat::Int) => {
             let output_data_fn = move |data: &mut [i16], _: &cpal::OutputCallbackInfo| {
@@ -751,9 +755,12 @@ fn output_stream_from(
                 }
             };
 
-            output_device.build_output_stream(&stream_config, output_data_fn, |error| {
-                eprintln!("an error occurred on stream: {error:?}")
-            })?
+            output_device.build_output_stream(
+                &stream_config,
+                output_data_fn,
+                |error| eprintln!("an error occurred on stream: {error:?}"),
+                None,
+            )?
         }
         _ => {
             bail!("Unsupported SampleFormat found for playback.");
@@ -771,6 +778,7 @@ fn sample_format(format: cpal::SampleFormat) -> hound::SampleFormat {
         cpal::SampleFormat::U16 => hound::SampleFormat::Int,
         cpal::SampleFormat::I16 => hound::SampleFormat::Int,
         cpal::SampleFormat::F32 => hound::SampleFormat::Float,
+        _ => panic!("Sample format: Incompatible format found."),
     }
 }
 
@@ -786,10 +794,10 @@ fn wav_spec_from_config(config: &cpal::SupportedStreamConfig) -> hound::WavSpec 
 fn write_input_data<T, U>(input: &[T], writer: &mut WavWriter<BufWriter<File>>)
 where
     T: cpal::Sample,
-    U: cpal::Sample + hound::Sample,
+    U: cpal::Sample + hound::Sample + FromSample<T>,
 {
     for &sample in input.iter() {
-        let sample: U = cpal::Sample::from(&sample);
+        let sample: U = U::from_sample(sample);
         writer.write_sample(sample).ok();
     }
 }
@@ -833,17 +841,21 @@ fn input_stream_from(
             &input_config.into(),
             move |data, _: &_| write_input_data::<f32, f32>(data, &mut writer),
             err_fn,
+            None,
         )?,
         SampleFormat::I16 => input_device.build_input_stream(
             &input_config.into(),
             move |data, _: &_| write_input_data::<i16, i16>(data, &mut writer),
             err_fn,
+            None,
         )?,
         SampleFormat::U16 => input_device.build_input_stream(
             &input_config.into(),
             move |data, _: &_| write_input_data::<u16, i16>(data, &mut writer),
             err_fn,
+            None,
         )?,
+        _ => panic!("Input Stream: Incompatible format found."),
     };
 
     io_stream.play()?;

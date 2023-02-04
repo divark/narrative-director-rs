@@ -5,6 +5,9 @@
 - This project uses [ISO Standard](https://www.iso.org/iso-8601-date-and-time-format.html) date formatting
 
 ## Unreleased
+### Changed
+- Updated CPAL dependency to 0.15
+
 ### Fixed
 - Text not wrapping.
 
