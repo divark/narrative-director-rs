@@ -22,6 +22,7 @@
 
 ### Fixed
 - Icon not being found in runtime.
+- macOS builds only being compatible with latest macOS version.
 
 ## [0.1.0] - 2023-01-29
 ### Added
