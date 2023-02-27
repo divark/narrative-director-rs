@@ -8,7 +8,9 @@ use crate::media::io::{AudioInput, AudioOutput};
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct Session {
     paragraph_num: usize,
-    project_directory: PathBuf,
+
+    project_file_name: String,
+    project_output_directory: PathBuf,
 
     audio_input: AudioInput,
     audio_output: AudioOutput,
@@ -45,11 +47,14 @@ impl Session {
 
         let project_name = text_file_loc
             .file_stem()
-            .expect("Could not parse file stem from text file");
+            .expect("Could not parse file stem from text file")
+            .to_str()
+            .expect("Could not convert file name to string")
+            .to_string();
 
         let mut project_directory = PathBuf::new();
         project_directory.push(default_audio_dir);
-        project_directory.push(project_name);
+        project_directory.push(project_name.clone());
         if !project_directory.is_dir() {
             DirBuilder::new()
                 .recursive(true)
@@ -59,7 +64,9 @@ impl Session {
 
         Session {
             paragraph_num: 0,
-            project_directory,
+
+            project_file_name: project_name,
+            project_output_directory: project_directory,
 
             audio_input: AudioInput::new(),
             audio_output: AudioOutput::new(),
@@ -69,10 +76,8 @@ impl Session {
     fn get_session_path(&self) -> PathBuf {
         let projects_path = get_projects_path();
         let project_name = self
-            .project_directory
-            .components()
-            .last()
-            .expect("Could not get project name from path.");
+            .project_file_name
+            .clone();
 
         let mut session_path = PathBuf::new();
         session_path.push(projects_path);
@@ -128,11 +133,11 @@ impl Session {
     }
 
     pub fn set_project_directory(&mut self, new_directory: PathBuf) {
-        self.project_directory = new_directory;
+        self.project_output_directory = new_directory;
     }
 
     pub fn project_directory(&self) -> PathBuf {
-        self.project_directory.clone()
+        self.project_output_directory.clone()
     }
 
     pub fn audio_output(&self) -> &AudioOutput {
