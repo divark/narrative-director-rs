@@ -75,9 +75,7 @@ impl Session {
 
     fn get_session_path(&self) -> PathBuf {
         let projects_path = get_projects_path();
-        let project_name = self
-            .project_file_name
-            .clone();
+        let project_name = self.project_file_name.clone();
 
         let mut session_path = PathBuf::new();
         session_path.push(projects_path);
