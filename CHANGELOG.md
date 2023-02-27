@@ -11,6 +11,7 @@
 ### Fixed
 - Text not wrapping.
 - Project directory not being saved properly when changed in Preferences.
+- macOS builds only being compatible with latest macOS version.
 
 ## [0.1.1] - 2023-01-30
 ### Added
@@ -22,7 +23,6 @@
 
 ### Fixed
 - Icon not being found in runtime.
-- macOS builds only being compatible with latest macOS version.
 
 ## [0.1.0] - 2023-01-29
 ### Added
