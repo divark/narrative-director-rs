@@ -1,5 +1,6 @@
 use fltk::{
     app,
+    button::Button,
     enums::FrameType,
     frame::Frame,
     group::{Flex, FlexType},
@@ -19,10 +20,7 @@ impl AboutDialog {
             .with_label("About Narrative Director")
             .with_size(640, 360);
 
-        let mut flex_column_layout = Flex::default_fill();
-        flex_column_layout.set_type(FlexType::Column);
-
-        let mut flex_row_layout = Flex::default_fill();
+        let mut flex_row_layout = Flex::new(10, 10, 620, 300, "");
         flex_row_layout.set_type(FlexType::Row);
 
         let mut frame = Frame::default_fill().center_of_parent();
@@ -40,7 +38,12 @@ impl AboutDialog {
         description.wrap_mode(WrapMode::AtBounds, 0);
 
         flex_row_layout.end();
-        flex_column_layout.end();
+
+        let mut close_button = Button::new(570, 320, 60, 30, "Close");
+        let mut about_window_clone = about_window.clone();
+        close_button.set_callback(move |_button| {
+            about_window_clone.hide();
+        });
 
         about_window.end();
         about_window.make_modal(true);

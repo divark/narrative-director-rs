@@ -215,6 +215,7 @@ impl MainApplication {
                         {
                             self.paragraph_viewer
                                 .show_paragraph_at(chosen_paragraph_num - 1);
+                            self.load_audio_file();
                         }
                     }
                     UIActions::LoadFile => {
