@@ -10,6 +10,7 @@
 
 ### Changed
 - Updated CPAL dependency to 0.15
+- Updated various dependencies to latest version via cargo update.
 
 ### Fixed
 - Text not wrapping.
