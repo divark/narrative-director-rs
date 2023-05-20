@@ -5,6 +5,8 @@
 - This project uses [ISO Standard](https://www.iso.org/iso-8601-date-and-time-format.html) date formatting
 
 ## Unreleased
+### Changed
+- Fixed Changelog ordering of tags.
 
 ## [0.1.2] - 2023-05-20
 ### Added
@@ -70,5 +72,6 @@
 - Unit Testing in GitHub Workflow files, temporarily.
 
 [Unreleased]: https://github.com/divark/narrative-director-rs/blob/main/CHANGELOG.md
-[0.1.0]: https://github.com/divark/narrative-director-rs/releases/tag/v0.1.0
+[0.1.2]: https://github.com/divark/narrative-director-rs/releases/tag/v0.1.2
 [0.1.1]: https://github.com/divark/narrative-director-rs/releases/tag/v0.1.1
+[0.1.0]: https://github.com/divark/narrative-director-rs/releases/tag/v0.1.0
