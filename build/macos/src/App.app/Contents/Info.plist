@@ -23,10 +23,6 @@
         <string>Need microphone access for recording audio.</string>
         <!-- Version -->
         <key>CFBundleShortVersionString</key>
-        <string>0.1.0</string>
-        <key>CFBundleSupportedPlatforms</key>
-        <array>
-            <string>MacOSX</string>
-        </array>
+        <string>0.1.2</string>
     </dict>
 </plist>

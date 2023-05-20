@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 use fltk::app;
 use fltk::frame::Frame;
@@ -14,7 +14,7 @@ use std::time::Duration;
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{
-    default_host, Device, FromSample, SampleFormat, SampleRate, Stream, StreamConfig,
+    default_host, Device, FromSample, Sample, SampleRate, Stream, StreamConfig,
     SupportedStreamConfig,
 };
 use hound::{WavReader, WavSpec, WavWriter};
@@ -240,7 +240,8 @@ fn spawn_media_ui_modifier(
                         continue;
                     }
 
-                    let _recording_stream = recording_status.expect("Could not start recording.");
+                    let (_recording_stream, audio_file_handle) =
+                        recording_status.expect("Could not start recording.");
 
                     let mut current_pos_secs = 0;
                     while *media_state
@@ -255,6 +256,14 @@ fn spawn_media_ui_modifier(
                         playback_widget.set_total(current_pos_secs);
                         playback_widget.update_recording();
                     }
+
+                    audio_file_handle
+                        .lock()
+                        .unwrap()
+                        .take()
+                        .unwrap()
+                        .finalize()
+                        .expect("Could not wrap up finishing writing audio file.");
 
                     // NOTE: Pausing is not currently supported, so the state should only be in StoppedRecording.
                     let current_state = *media_state
@@ -773,12 +782,14 @@ fn output_stream_from(
     Ok((output_stream, duration_secs))
 }
 
+// For the remainder of these functions, the following example was used
+// as reference:
+// https://github.com/RustAudio/cpal/blob/master/examples/record_wav.rs
 fn sample_format(format: cpal::SampleFormat) -> hound::SampleFormat {
-    match format {
-        cpal::SampleFormat::U16 => hound::SampleFormat::Int,
-        cpal::SampleFormat::I16 => hound::SampleFormat::Int,
-        cpal::SampleFormat::F32 => hound::SampleFormat::Float,
-        _ => panic!("Sample format: Incompatible format found."),
+    if format.is_float() {
+        hound::SampleFormat::Float
+    } else {
+        hound::SampleFormat::Int
     }
 }
 
@@ -791,14 +802,20 @@ fn wav_spec_from_config(config: &cpal::SupportedStreamConfig) -> hound::WavSpec 
     }
 }
 
-fn write_input_data<T, U>(input: &[T], writer: &mut WavWriter<BufWriter<File>>)
+type WavWriterHandle = Arc<Mutex<Option<hound::WavWriter<BufWriter<File>>>>>;
+
+fn write_input_data<T, U>(input: &[T], writer: &WavWriterHandle)
 where
-    T: cpal::Sample,
-    U: cpal::Sample + hound::Sample + FromSample<T>,
+    T: Sample,
+    U: Sample + hound::Sample + FromSample<T>,
 {
-    for &sample in input.iter() {
-        let sample: U = U::from_sample(sample);
-        writer.write_sample(sample).ok();
+    if let Ok(mut guard) = writer.try_lock() {
+        if let Some(writer) = guard.as_mut() {
+            for &sample in input.iter() {
+                let sample: U = U::from_sample(sample);
+                writer.write_sample(sample).ok();
+            }
+        }
     }
 }
 
@@ -827,9 +844,12 @@ fn input_stream_from(
     input_device: Device,
     input_config: SupportedStreamConfig,
     input_file: PathBuf,
-) -> Result<Stream> {
+) -> Result<(Stream, WavWriterHandle)> {
     let spec = wav_spec_from_config(&input_config);
-    let mut writer = WavWriter::create(input_file, spec)?;
+    let writer = WavWriter::create(input_file, spec)?;
+    let writer = Arc::new(Mutex::new(Some(writer)));
+
+    let writer_2 = writer.clone();
 
     let err_fn = move |err| {
         eprintln!("IO Recording error: {err}");
@@ -837,27 +857,38 @@ fn input_stream_from(
 
     // Use the config to hook up the input (Some microphone) to the output (A file)
     let io_stream = match input_config.sample_format() {
-        SampleFormat::F32 => input_device.build_input_stream(
+        cpal::SampleFormat::I8 => input_device.build_input_stream(
             &input_config.into(),
-            move |data, _: &_| write_input_data::<f32, f32>(data, &mut writer),
+            move |data, _: &_| write_input_data::<i8, i8>(data, &writer_2),
             err_fn,
             None,
         )?,
-        SampleFormat::I16 => input_device.build_input_stream(
+        cpal::SampleFormat::I16 => input_device.build_input_stream(
             &input_config.into(),
-            move |data, _: &_| write_input_data::<i16, i16>(data, &mut writer),
+            move |data, _: &_| write_input_data::<i16, i16>(data, &writer_2),
             err_fn,
             None,
         )?,
-        SampleFormat::U16 => input_device.build_input_stream(
+        cpal::SampleFormat::I32 => input_device.build_input_stream(
             &input_config.into(),
-            move |data, _: &_| write_input_data::<u16, i16>(data, &mut writer),
+            move |data, _: &_| write_input_data::<i32, i32>(data, &writer_2),
             err_fn,
             None,
         )?,
-        _ => panic!("Input Stream: Incompatible format found."),
+        cpal::SampleFormat::F32 => input_device.build_input_stream(
+            &input_config.into(),
+            move |data, _: &_| write_input_data::<f32, f32>(data, &writer_2),
+            err_fn,
+            None,
+        )?,
+        sample_format => {
+            return Err(anyhow::Error::msg(format!(
+                "Unsupported sample format '{sample_format}'"
+            )))
+        }
     };
 
     io_stream.play()?;
-    Ok(io_stream)
+
+    Ok((io_stream, writer))
 }

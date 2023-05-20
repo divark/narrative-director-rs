@@ -5,6 +5,8 @@
 - This project uses [ISO Standard](https://www.iso.org/iso-8601-date-and-time-format.html) date formatting
 
 ## Unreleased
+
+## [0.1.2] - 2023-05-20
 ### Added
 - Close button to About dialog.
 
@@ -16,6 +18,7 @@
 - Text not wrapping.
 - Project directory not being saved properly when changed in Preferences.
 - macOS builds only being compatible with latest macOS version.
+- macOS not saving audio file after recording.
 - Existing audio not being loaded after using go-to prompt.
 
 ## [0.1.1] - 2023-01-30
