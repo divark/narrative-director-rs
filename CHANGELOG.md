@@ -8,6 +8,9 @@
 ### Changed
 - Fixed Changelog ordering of tags.
 
+### Fixed
+- Recording halting from unsupported Sample Format.
+
 ## [0.1.2] - 2023-05-20
 ### Added
 - Close button to About dialog.

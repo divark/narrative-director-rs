@@ -673,6 +673,7 @@ impl AudioInput {
                 config.channels() == self.channels
                     && desired_sample_rate >= config.min_sample_rate()
                     && desired_sample_rate <= config.max_sample_rate()
+                    && (config.sample_format().is_int() || config.sample_format().is_float())
             })
             .expect("Could not find a config with the desired channel and sample rate")
             .with_sample_rate(SampleRate(self.sample_rate))
