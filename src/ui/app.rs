@@ -311,7 +311,7 @@ fn create_menu_bar(
         UIActions::About,
     );
 
-    flex_column_layout.set_size(&menu_bar, 30);
+    flex_column_layout.fixed(&menu_bar, 30);
 
     menu_bar
 }
@@ -329,7 +329,7 @@ fn create_widget_layout(
     counter_text.clear_visible_focus();
     counter_text.emit(*action_broadcaster, UIActions::OpenGoto);
 
-    flex_column_layout.set_size(&counter_text, counter_text.label_size());
+    flex_column_layout.fixed(&counter_text, counter_text.label_size());
 
     // Paragraph Viewer Widget
     let viewer_text = text::TextBuffer::default();
@@ -345,7 +345,7 @@ fn create_widget_layout(
     progress_bar.set_callback(move |slider_location| {
         broadcaster_copy.send(UIActions::AudioSkip(slider_location.value() as usize));
     });
-    flex_column_layout.set_size(&progress_bar, 30);
+    flex_column_layout.fixed(&progress_bar, 30);
 
     let navigation_pack = Flex::default_fill().with_type(group::FlexType::Row);
 
@@ -362,7 +362,7 @@ fn create_widget_layout(
     next_button.deactivate();
 
     navigation_pack.end();
-    flex_column_layout.set_size(&navigation_pack, 30);
+    flex_column_layout.fixed(&navigation_pack, 30);
 
     // Playback Widgets
     let playback_pack = Flex::default_fill().with_type(group::FlexType::Row);
@@ -380,7 +380,7 @@ fn create_widget_layout(
     play_pause_button.deactivate();
 
     playback_pack.end();
-    flex_column_layout.set_size(&playback_pack, 30);
+    flex_column_layout.fixed(&playback_pack, 30);
 
     // Status Bar
     let status_bar_buf = TextBuffer::default();
@@ -388,7 +388,7 @@ fn create_widget_layout(
     let mut status_bar = TextDisplay::default();
     status_bar.set_buffer(status_bar_buf);
 
-    flex_column_layout.set_size(&status_bar, 30);
+    flex_column_layout.fixed(&status_bar, 30);
 
     flex_column_layout.end();
 

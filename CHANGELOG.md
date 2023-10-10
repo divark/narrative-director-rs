@@ -5,11 +5,16 @@
 - This project uses [ISO Standard](https://www.iso.org/iso-8601-date-and-time-format.html) date formatting
 
 ## Unreleased
+### Added
+- Wayland support.
+
 ### Changed
-- Fixed Changelog ordering of tags.
+- Updated FLTK and various developer dependencies.
+- Changed from set_size to fixed, removing deprecations.
 
 ### Fixed
 - Recording halting from unsupported Sample Format.
+- Fixed Changelog ordering of tags.
 
 ## [0.1.2] - 2023-05-20
 ### Added
