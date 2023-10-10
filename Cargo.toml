@@ -8,10 +8,10 @@ license = "gpl-3.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-fltk = "^1.4"
+fltk = { version = "^1.4", features = ["fltk-bundled"] }
 cpal = "^0.15"
 hound = "^3.5"
-dirs = "^4.0"
+dirs = "^5.0"
 serde = { version = "^1.0", features = ["derive"] }
 serde_json = "1.0"
 anyhow = "^1.0"
@@ -20,4 +20,4 @@ anyhow = "^1.0"
 tempfile = "3"
 
 [build-dependencies]
-embed-resource = "^1.4"
+embed-resource = "^2.2"
