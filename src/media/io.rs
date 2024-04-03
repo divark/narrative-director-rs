@@ -1,3 +1,9 @@
+use nokhwa::native_api_backend;
+use nokhwa::pixel_format::RgbFormat;
+use nokhwa::query;
+use nokhwa::utils::{CameraIndex, RequestedFormat, RequestedFormatType};
+use nokhwa::Camera;
+
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
@@ -892,4 +898,59 @@ fn input_stream_from(
     io_stream.play()?;
 
     Ok((io_stream, writer))
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
+pub struct VideoInput {
+    pub frames_per_second: u32,
+    pub input_device_name: String,
+}
+
+impl VideoInput {
+    /// Returns a new VideoInput populated from the defaults
+    /// provided by the system, or to the empty string and 0
+    /// fps if none were found.
+    pub fn new() -> VideoInput {
+        let default_camera = CameraIndex::Index(0);
+        let default_frame_rate =
+            RequestedFormat::new::<RgbFormat>(RequestedFormatType::AbsoluteHighestFrameRate);
+
+        let (frames_per_second, input_device_name) =
+            if let Ok(camera_found) = Camera::new(default_camera, default_frame_rate) {
+                (camera_found.frame_rate(), camera_found.info().human_name())
+            } else {
+                (0, String::from(""))
+            };
+
+        VideoInput {
+            frames_per_second,
+            input_device_name,
+        }
+    }
+
+    pub fn input_device_name(&self) -> String {
+        self.input_device_name.clone()
+    }
+
+    pub fn input_device_names(&self) -> Vec<String> {
+        let default_backend =
+            native_api_backend().expect("VideoInput input_device_names: Could not find backend.");
+        let all_devices = query(default_backend)
+            .expect("VideoInput input_device_names: Could not query for all known video devices.");
+
+        let mut input_device_names = Vec::new();
+        for device in all_devices {
+            input_device_names.push(device.human_name());
+        }
+
+        input_device_names
+    }
+
+    pub fn frames_per_second(&self) -> u32 {
+        self.frames_per_second
+    }
+
+    pub fn set_frames_per_second(&mut self, desired_fps: u32) {
+        self.frames_per_second = desired_fps;
+    }
 }
