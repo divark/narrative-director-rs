@@ -15,15 +15,9 @@ dirs = "^5.0"
 serde = { version = "^1.0", features = ["derive"] }
 serde_json = "1.0"
 anyhow = "^1.0"
-# This particular commit for nokhwa has updated dependencies
-# that removes compiler errors otherwise found on distros
-# such as openSUSE Tumbleweed.
-# Reference: https://github.com/l1npengtul/nokhwa/issues/147
-nokhwa = { git = "https://github.com/l1npengtul/nokhwa.git", rev = "f140541", features = ["input-native"] }
 
 [dev-dependencies]
 tempfile = "3"
 
 [build-dependencies]
 embed-resource = "^2.2"
-
