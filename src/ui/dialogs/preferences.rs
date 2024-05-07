@@ -2,11 +2,12 @@ use std::path::PathBuf;
 
 use fltk::{
     app,
-    button::Button,
+    button::{Button, CheckButton},
     dialog,
     enums::{Align, Font, FrameType},
     group::{Group, Tabs},
-    misc::InputChoice,
+    input::Input,
+    misc::{InputChoice, Spinner},
     prelude::{DisplayExt, GroupExt, WidgetBase, WidgetExt, WindowExt},
     text::{TextBuffer, TextDisplay},
     window::Window,
@@ -108,6 +109,22 @@ fn create_general_tab() -> GeneralTabWidgets {
     GeneralTabWidgets {
         project_directory_text,
     }
+}
+
+struct TextTabWidgets {
+    gatherer_name: InputChoice,
+
+    gatherer_amount: Spinner,
+    gatherer_amount_editable: CheckButton,
+
+    gatherer_delimiters: Input,
+    gatherer_delimiters_editable: CheckButton,
+}
+
+fn create_text_tab() -> TextTabWidgets {
+    let text_tab = Group::new(20, 30, 360, 250, "Text\t\t");
+
+    todo!("create_text_tab: This needs to be implemented with flex boxes in mind.")
 }
 
 struct AudioTabWidgets {
