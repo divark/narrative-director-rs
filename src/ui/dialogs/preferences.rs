@@ -5,7 +5,7 @@ use fltk::{
     button::{Button, CheckButton},
     dialog,
     enums::{Align, Font, FrameType},
-    group::{Group, Tabs},
+    group::{Flex, FlexType, Group, Tabs},
     input::Input,
     misc::{InputChoice, Spinner},
     prelude::{DisplayExt, GroupExt, WidgetBase, WidgetExt, WindowExt},
@@ -122,9 +122,16 @@ struct TextTabWidgets {
 }
 
 fn create_text_tab() -> TextTabWidgets {
-    let text_tab = Group::new(20, 30, 360, 250, "Text\t\t");
+    let mut text_tab = Flex::new(20, 30, 360, 250, "Text\t\t");
+    text_tab.set_type(FlexType::Column);
+    text_tab.set_spacing(10);
 
-    todo!("create_text_tab: This needs to be implemented with flex boxes in mind.")
+    let mut extraction_group = Flex::new(20, 40, 360, 150, "Extraction:");
+    extraction_group.set_type(FlexType::Column);
+    extraction_group.set_label_font(Font::HelveticaBold);
+    extraction_group.set_frame(FrameType::ThinDownFrame);
+
+    todo!("create_text_tab: This needs to be implemented with flex boxes in mind.");
 }
 
 struct AudioTabWidgets {
@@ -138,7 +145,8 @@ struct AudioTabWidgets {
 fn create_audio_tab() -> AudioTabWidgets {
     let audio_tab = Group::new(20, 30, 360, 250, "Audio\t\t");
 
-    let mut output_widget_group = Group::new(20, 40, 360, 50, "Output");
+    let mut output_widget_group = Flex::new(20, 40, 360, 50, "Output");
+    output_widget_group.set_type(FlexType::Column);
     let output_label_offset = output_widget_group.label_size();
     output_widget_group.set_align(Align::TopLeft);
     output_widget_group.set_pos(
@@ -147,36 +155,44 @@ fn create_audio_tab() -> AudioTabWidgets {
     );
     output_widget_group.set_label_font(Font::HelveticaBold);
     output_widget_group.set_frame(FrameType::ThinDownFrame);
-    let audio_output_name =
-        InputChoice::new(40 + 90, 50 + output_label_offset, 320 - 80, 30, "Device:");
+
+    let audio_output_name = InputChoice::default()
+        .with_size(0, 30)
+        .with_label("Device:");
+
+    output_widget_group.set_margins(100, 10, 10, 0);
+    output_widget_group.set_pad(10);
+    output_widget_group.fixed(&audio_output_name, 30);
     output_widget_group.end();
 
-    let mut input_widget_group = Group::new(
+    let mut input_widget_group = Flex::new(
         20,
         110 + output_label_offset,
         360,
         170 - output_label_offset,
         "Input",
     );
+    input_widget_group.set_type(FlexType::Column);
     input_widget_group.set_align(Align::TopLeft);
     input_widget_group.set_label_font(Font::HelveticaBold);
     input_widget_group.set_frame(FrameType::ThinDownFrame);
-    let audio_input_name =
-        InputChoice::new(40 + 90, 120 + output_label_offset, 320 - 80, 30, "Device:");
-    let audio_input_sample_rate = InputChoice::new(
-        40 + 90,
-        160 + output_label_offset,
-        320 - 80,
-        30,
-        "Sample Rate:",
-    );
-    let audio_input_channels = InputChoice::new(
-        40 + 90,
-        200 + output_label_offset,
-        320 - 80,
-        30,
-        "Channels:",
-    );
+
+    let audio_input_name = InputChoice::default()
+        .with_size(0, 30)
+        .with_label("Device:");
+    let audio_input_sample_rate = InputChoice::default()
+        .with_size(0, 30)
+        .with_label("Sample Rate:");
+    let audio_input_channels = InputChoice::default()
+        .with_size(0, 30)
+        .with_label("Channels");
+
+    input_widget_group.fixed(&audio_input_name, 30);
+    input_widget_group.fixed(&audio_input_sample_rate, 30);
+    input_widget_group.fixed(&audio_input_channels, 30);
+
+    input_widget_group.set_margins(100, 10, 10, 0);
+    input_widget_group.set_pad(10);
     input_widget_group.end();
 
     audio_tab.end();
