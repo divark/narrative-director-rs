@@ -63,7 +63,7 @@ struct GeneralTabWidgets {
 fn create_general_tab() -> GeneralTabWidgets {
     let general_tab = Group::new(20, 30, 360, 250, "General\t\t");
 
-    let mut project_widgets_group = Group::new(20, 40, 360, 70, "Project");
+    let mut project_widgets_group = Flex::new(20, 40, 360, 40, "Project");
     let project_label_offset = project_widgets_group.label_size();
     project_widgets_group.set_align(Align::TopLeft);
     project_widgets_group.set_pos(
@@ -72,18 +72,19 @@ fn create_general_tab() -> GeneralTabWidgets {
     );
     project_widgets_group.set_label_font(Font::HelveticaBold);
     project_widgets_group.set_frame(FrameType::ThinDownFrame);
+    project_widgets_group.set_type(FlexType::Row);
+    project_widgets_group.set_spacing(10);
+    project_widgets_group.set_margins(110, 0, 0, 0);
 
-    let mut project_directory_text = TextDisplay::new(
-        30 + 110,
-        55 + project_label_offset,
-        160,
-        40,
-        "Output Directory:",
-    );
+    let mut project_directory_text = TextDisplay::default()
+        .with_size(0, 40)
+        .with_label("Output Directory:");
     project_directory_text.set_align(Align::Left);
     project_directory_text.set_buffer(TextBuffer::default());
+
     let mut project_directory_chooser_button =
-        Button::new(30 + 270 + 10, 60 + project_label_offset, 60, 30, "Choose");
+        Button::default().with_size(60, 30).with_label("Choose");
+    project_widgets_group.fixed(&project_directory_chooser_button, 60);
 
     let project_directory_text_clone = project_directory_text.clone();
     project_directory_chooser_button.set_callback(move |_| {
