@@ -5,6 +5,7 @@ use fltk::{
     button::{Button, CheckButton},
     dialog,
     enums::{Align, Font, FrameType},
+    frame::Frame,
     group::{Flex, FlexType, Group, Tabs},
     input::Input,
     misc::{InputChoice, Spinner},
@@ -122,17 +123,88 @@ struct TextTabWidgets {
     gatherer_delimiters_editable: CheckButton,
 }
 
-fn create_text_tab() -> TextTabWidgets {
-    let mut text_tab = Flex::new(20, 30, 360, 250, "Text\t\t");
-    text_tab.set_type(FlexType::Column);
-    text_tab.set_spacing(10);
+const TEXT_TAB_LABEL_LENGTH: i32 = 100;
+const TEXT_TAB_INPUT_LENGTH: i32 = 155;
+const TEXT_TAB_CHECKBUTTON_LENGTH: i32 = 70;
+const TEXT_TAB_SPACING: i32 = 10;
 
-    let mut extraction_group = Flex::new(20, 40, 360, 150, "Extraction:");
+fn create_text_tab() -> TextTabWidgets {
+    let text_tab = Group::new(20, 30, 360, 250, "Text\t\t");
+
+    let mut extraction_group = Flex::new(20, 40, 360, 130, "Extraction");
+    let extraction_group_label_offset = extraction_group.label_size();
+    extraction_group.set_align(Align::TopLeft);
+    extraction_group.set_pos(
+        extraction_group.x(),
+        extraction_group.y() + extraction_group_label_offset,
+    );
     extraction_group.set_type(FlexType::Column);
     extraction_group.set_label_font(Font::HelveticaBold);
     extraction_group.set_frame(FrameType::ThinDownFrame);
+    extraction_group.set_margins(0, TEXT_TAB_SPACING, 0, TEXT_TAB_SPACING);
+    extraction_group.set_spacing(TEXT_TAB_SPACING);
 
-    todo!("create_text_tab: This needs to be implemented with flex boxes in mind.");
+    let mut gatherer_group = Flex::default().with_type(FlexType::Row);
+    extraction_group.fixed(&gatherer_group, 30);
+    gatherer_group.set_spacing(TEXT_TAB_SPACING);
+
+    let gatherer_label = Frame::default();
+    gatherer_group.fixed(&gatherer_label, TEXT_TAB_LABEL_LENGTH);
+
+    let gatherer_selector = InputChoice::default()
+        .with_label("Gatherer:")
+        .with_align(Align::Left);
+    gatherer_group.fixed(&gatherer_selector, TEXT_TAB_INPUT_LENGTH);
+
+    let gatherer_selector_add = Button::default().with_label("+");
+    gatherer_group.fixed(&gatherer_selector_add, 30);
+
+    let gatherer_selector_remove = Button::default().with_label("-");
+    gatherer_group.fixed(&gatherer_selector_remove, 30);
+    gatherer_group.end();
+
+    let mut amount_group = Flex::default().with_type(FlexType::Row);
+    extraction_group.fixed(&amount_group, 30);
+    amount_group.set_spacing(TEXT_TAB_SPACING);
+
+    let amount_label = Frame::default();
+    amount_group.fixed(&amount_label, TEXT_TAB_LABEL_LENGTH);
+
+    let amount_spinner = Spinner::default()
+        .with_label("Amount:")
+        .with_align(Align::Left);
+    amount_group.fixed(&amount_spinner, TEXT_TAB_INPUT_LENGTH);
+
+    let amount_custom_enabler = CheckButton::default().with_label("Custom");
+    amount_group.fixed(&amount_custom_enabler, TEXT_TAB_CHECKBUTTON_LENGTH);
+    amount_group.end();
+
+    let mut ending_with_group = Flex::default().with_type(FlexType::Row);
+    extraction_group.fixed(&ending_with_group, 30);
+    ending_with_group.set_spacing(TEXT_TAB_SPACING);
+
+    let ending_with_label = Frame::default();
+    ending_with_group.fixed(&ending_with_label, TEXT_TAB_LABEL_LENGTH);
+
+    let ending_with_delimiters_input = Input::default()
+        .with_label("Ending With:")
+        .with_align(Align::Left);
+    ending_with_group.fixed(&ending_with_delimiters_input, TEXT_TAB_INPUT_LENGTH);
+
+    let ending_with_custom_enabler = CheckButton::default().with_label("Custom");
+    ending_with_group.fixed(&ending_with_custom_enabler, TEXT_TAB_CHECKBUTTON_LENGTH);
+    ending_with_group.end();
+
+    extraction_group.end();
+    text_tab.end();
+
+    TextTabWidgets {
+        gatherer_name: gatherer_selector,
+        gatherer_amount: amount_spinner,
+        gatherer_amount_editable: amount_custom_enabler,
+        gatherer_delimiters: ending_with_delimiters_input,
+        gatherer_delimiters_editable: ending_with_custom_enabler,
+    }
 }
 
 struct AudioTabWidgets {
@@ -161,7 +233,7 @@ fn create_audio_tab() -> AudioTabWidgets {
         .with_size(0, 30)
         .with_label("Device:");
 
-    output_widget_group.set_margins(100, 10, 10, 0);
+    output_widget_group.set_margins(TEXT_TAB_LABEL_LENGTH, 10, 10, 0);
     output_widget_group.set_pad(10);
     output_widget_group.fixed(&audio_output_name, 30);
     output_widget_group.end();
@@ -192,8 +264,8 @@ fn create_audio_tab() -> AudioTabWidgets {
     input_widget_group.fixed(&audio_input_sample_rate, 30);
     input_widget_group.fixed(&audio_input_channels, 30);
 
-    input_widget_group.set_margins(100, 10, 10, 0);
-    input_widget_group.set_pad(10);
+    input_widget_group.set_margins(TEXT_TAB_LABEL_LENGTH, TEXT_TAB_SPACING, TEXT_TAB_SPACING, 0);
+    input_widget_group.set_pad(TEXT_TAB_SPACING);
     input_widget_group.end();
 
     audio_tab.end();
@@ -213,10 +285,11 @@ impl PreferencesDialog {
             .with_size(400, 340)
             .with_label("Preferences");
 
-        let preference_topics = Tabs::new(10, 10, 380, 280, "");
+        let preference_topics = Tabs::new(TEXT_TAB_SPACING, TEXT_TAB_SPACING, 380, 280, "");
 
         let general_tab = create_general_tab();
         let mut audio_tab = create_audio_tab();
+        let text_tab = create_text_tab();
 
         preference_topics.end();
 
