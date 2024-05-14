@@ -115,12 +115,11 @@ fn create_general_tab() -> GeneralTabWidgets {
 
 struct TextTabWidgets {
     gatherer_name: InputChoice,
+    gatherer_custom_enabler: CheckButton,
 
     gatherer_amount: Spinner,
-    gatherer_amount_editable: CheckButton,
 
     gatherer_delimiters: Input,
-    gatherer_delimiters_editable: CheckButton,
 }
 
 const TEXT_TAB_LABEL_LENGTH: i32 = 100;
@@ -141,7 +140,7 @@ fn create_text_tab() -> TextTabWidgets {
     extraction_group.set_type(FlexType::Column);
     extraction_group.set_label_font(Font::HelveticaBold);
     extraction_group.set_frame(FrameType::ThinDownFrame);
-    extraction_group.set_margins(0, TEXT_TAB_SPACING, 0, TEXT_TAB_SPACING);
+    extraction_group.set_margins(0, TEXT_TAB_SPACING, TEXT_TAB_SPACING, TEXT_TAB_SPACING);
     extraction_group.set_spacing(TEXT_TAB_SPACING);
 
     let mut gatherer_group = Flex::default().with_type(FlexType::Row);
@@ -156,11 +155,8 @@ fn create_text_tab() -> TextTabWidgets {
         .with_align(Align::Left);
     gatherer_group.fixed(&gatherer_selector, TEXT_TAB_INPUT_LENGTH);
 
-    let gatherer_selector_add = Button::default().with_label("+");
-    gatherer_group.fixed(&gatherer_selector_add, 30);
-
-    let gatherer_selector_remove = Button::default().with_label("-");
-    gatherer_group.fixed(&gatherer_selector_remove, 30);
+    let gatherer_custom_enabler = CheckButton::default().with_label("Custom");
+    gatherer_group.fixed(&gatherer_custom_enabler, TEXT_TAB_CHECKBUTTON_LENGTH);
     gatherer_group.end();
 
     let mut amount_group = Flex::default().with_type(FlexType::Row);
@@ -173,10 +169,6 @@ fn create_text_tab() -> TextTabWidgets {
     let amount_spinner = Spinner::default()
         .with_label("Amount:")
         .with_align(Align::Left);
-    amount_group.fixed(&amount_spinner, TEXT_TAB_INPUT_LENGTH);
-
-    let amount_custom_enabler = CheckButton::default().with_label("Custom");
-    amount_group.fixed(&amount_custom_enabler, TEXT_TAB_CHECKBUTTON_LENGTH);
     amount_group.end();
 
     let mut ending_with_group = Flex::default().with_type(FlexType::Row);
@@ -189,10 +181,6 @@ fn create_text_tab() -> TextTabWidgets {
     let ending_with_delimiters_input = Input::default()
         .with_label("Ending With:")
         .with_align(Align::Left);
-    ending_with_group.fixed(&ending_with_delimiters_input, TEXT_TAB_INPUT_LENGTH);
-
-    let ending_with_custom_enabler = CheckButton::default().with_label("Custom");
-    ending_with_group.fixed(&ending_with_custom_enabler, TEXT_TAB_CHECKBUTTON_LENGTH);
     ending_with_group.end();
 
     extraction_group.end();
@@ -201,9 +189,8 @@ fn create_text_tab() -> TextTabWidgets {
     TextTabWidgets {
         gatherer_name: gatherer_selector,
         gatherer_amount: amount_spinner,
-        gatherer_amount_editable: amount_custom_enabler,
+        gatherer_custom_enabler,
         gatherer_delimiters: ending_with_delimiters_input,
-        gatherer_delimiters_editable: ending_with_custom_enabler,
     }
 }
 
