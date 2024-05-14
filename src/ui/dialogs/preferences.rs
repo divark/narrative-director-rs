@@ -9,7 +9,7 @@ use fltk::{
     group::{Flex, FlexType, Group, Tabs},
     input::Input,
     misc::{InputChoice, Spinner},
-    prelude::{DisplayExt, GroupExt, WidgetBase, WidgetExt, WindowExt},
+    prelude::{DisplayExt, GroupExt, InputExt, WidgetBase, WidgetExt, WindowExt},
     text::{TextBuffer, TextDisplay},
     window::Window,
 };
@@ -53,6 +53,11 @@ pub struct PreferencesDialog {
     audio_input_name: InputChoice,
     audio_input_sample_rate: InputChoice,
     audio_input_channels: InputChoice,
+
+    gathering_choice: InputChoice,
+    custom_gathering: CheckButton,
+    gathering_amount: Spinner,
+    gathering_delimiters: Input,
 
     save_button: Button,
 }
@@ -114,12 +119,12 @@ fn create_general_tab() -> GeneralTabWidgets {
 }
 
 struct TextTabWidgets {
-    gatherer_name: InputChoice,
-    gatherer_custom_enabler: CheckButton,
+    gathering_choice: InputChoice,
+    custom_gathering: CheckButton,
 
-    gatherer_amount: Spinner,
+    gathering_amount: Spinner,
 
-    gatherer_delimiters: Input,
+    gathering_delimiters: Input,
 }
 
 const TEXT_TAB_LABEL_LENGTH: i32 = 100;
@@ -151,7 +156,7 @@ fn create_text_tab() -> TextTabWidgets {
     gatherer_group.fixed(&gatherer_label, TEXT_TAB_LABEL_LENGTH);
 
     let gatherer_selector = InputChoice::default()
-        .with_label("Gatherer:")
+        .with_label("Gathering:")
         .with_align(Align::Left);
     gatherer_group.fixed(&gatherer_selector, TEXT_TAB_INPUT_LENGTH);
 
@@ -166,9 +171,10 @@ fn create_text_tab() -> TextTabWidgets {
     let amount_label = Frame::default();
     amount_group.fixed(&amount_label, TEXT_TAB_LABEL_LENGTH);
 
-    let amount_spinner = Spinner::default()
+    let mut amount_spinner = Spinner::default()
         .with_label("Amount:")
         .with_align(Align::Left);
+    amount_spinner.deactivate();
     amount_group.end();
 
     let mut ending_with_group = Flex::default().with_type(FlexType::Row);
@@ -178,19 +184,20 @@ fn create_text_tab() -> TextTabWidgets {
     let ending_with_label = Frame::default();
     ending_with_group.fixed(&ending_with_label, TEXT_TAB_LABEL_LENGTH);
 
-    let ending_with_delimiters_input = Input::default()
-        .with_label("Ending With:")
+    let mut ending_with_delimiters_input = Input::default()
+        .with_label("Splitting By:")
         .with_align(Align::Left);
+    ending_with_delimiters_input.deactivate();
     ending_with_group.end();
 
     extraction_group.end();
     text_tab.end();
 
     TextTabWidgets {
-        gatherer_name: gatherer_selector,
-        gatherer_amount: amount_spinner,
-        gatherer_custom_enabler,
-        gatherer_delimiters: ending_with_delimiters_input,
+        gathering_choice: gatherer_selector,
+        gathering_amount: amount_spinner,
+        custom_gathering: gatherer_custom_enabler,
+        gathering_delimiters: ending_with_delimiters_input,
     }
 }
 
@@ -276,7 +283,7 @@ impl PreferencesDialog {
 
         let general_tab = create_general_tab();
         let mut audio_tab = create_audio_tab();
-        let text_tab = create_text_tab();
+        let mut text_tab = create_text_tab();
 
         preference_topics.end();
 
@@ -321,6 +328,42 @@ impl PreferencesDialog {
             );
         });
 
+        let mut gathering_choice = text_tab.gathering_choice.clone();
+        let mut gathering_amount = text_tab.gathering_amount.clone();
+        let mut gathering_delimiters = text_tab.gathering_delimiters.clone();
+
+        text_tab.custom_gathering.set_callback(move |check_button| {
+            if check_button.is_checked() {
+                gathering_choice.set_value("Custom");
+                gathering_choice.deactivate();
+                gathering_amount.activate();
+                gathering_delimiters.activate();
+            } else {
+                gathering_choice.set_value_index(0);
+                gathering_amount.set_value(1.0);
+                gathering_delimiters.set_value("\t");
+
+                gathering_choice.activate();
+                gathering_amount.deactivate();
+                gathering_delimiters.deactivate();
+            }
+        });
+
+        let mut gathering_amount = text_tab.gathering_amount.clone();
+        let mut gathering_delimiters = text_tab.gathering_delimiters.clone();
+
+        text_tab.gathering_choice.set_callback(move |input_choice| {
+            if let Some(current_choice) = input_choice.value() {
+                if current_choice == "Paragraphs" {
+                    gathering_amount.set_value(1.0);
+                    gathering_delimiters.set_value("\t");
+                } else if current_choice == "Sentences" {
+                    gathering_amount.set_value(4.0);
+                    gathering_delimiters.set_value(".?!");
+                }
+            }
+        });
+
         preferences_window.end();
 
         PreferencesDialog {
@@ -332,6 +375,11 @@ impl PreferencesDialog {
             audio_input_name: audio_tab.audio_input_name,
             audio_input_sample_rate: audio_tab.audio_input_sample_rate,
             audio_input_channels: audio_tab.audio_input_channels,
+
+            gathering_choice: text_tab.gathering_choice,
+            custom_gathering: text_tab.custom_gathering,
+            gathering_amount: text_tab.gathering_amount,
+            gathering_delimiters: text_tab.gathering_delimiters,
 
             save_button,
         }
@@ -373,6 +421,47 @@ impl PreferencesDialog {
         );
     }
 
+    /// Clears and fills in Text Preferences to the relevant text input
+    /// widgets.
+    fn populate_text_tab_inputs(&mut self, session: &Session) {
+        let gathering_choice_names = ["Paragraphs", "Sentences"];
+        repopulate_input_choices(&mut self.gathering_choice, &gathering_choice_names);
+
+        if session.gathering_choice() == "Custom" {
+            self.custom_gathering.set_checked(true);
+            self.gathering_choice
+                .set_value(session.gathering_choice().as_str());
+            self.gathering_choice.deactivate();
+            self.gathering_amount
+                .set_value(session.gathering_amount() as f64);
+            self.gathering_amount.activate();
+            self.gathering_delimiters
+                .set_value(session.gathering_delimiters().as_str());
+            self.gathering_delimiters.activate();
+
+            return;
+        }
+
+        set_active_in_input_choices(
+            &mut self.gathering_choice,
+            &gathering_choice_names,
+            &session.gathering_choice().as_str(),
+        );
+    }
+
+    /// Pulls the currently selected values for all Text Preference
+    /// widgets and updates the current session accordingly.
+    fn save_text_preferences(&self, session: &mut Session) {
+        session.set_gathering_choice(
+            &self
+                .gathering_choice
+                .value()
+                .expect("save_text_preferences: Gathering Choice does not have a value."),
+        );
+        session.set_gathering_amount(self.gathering_amount.value() as usize);
+        session.set_gathering_delimiters(&self.gathering_delimiters.value());
+    }
+
     /// Pulls the currently selected values for all audio input widgets
     /// and updates the current session accordingly.
     fn save_audio_preferences(&self, session: &mut Session) {
@@ -406,6 +495,7 @@ impl PreferencesDialog {
             .unwrap()
             .set_text(session.project_directory().to_str().unwrap());
         self.populate_audio_tab_inputs(session);
+        self.populate_text_tab_inputs(session);
 
         self.window.show();
 
@@ -422,5 +512,6 @@ impl PreferencesDialog {
         session.set_project_directory(audio_output_dir);
 
         self.save_audio_preferences(session);
+        self.save_text_preferences(session);
     }
 }

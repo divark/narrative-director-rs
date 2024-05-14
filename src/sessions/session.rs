@@ -14,6 +14,10 @@ pub struct Session {
 
     audio_input: AudioInput,
     audio_output: AudioOutput,
+
+    gathering_choice: String,
+    gathering_amount: usize,
+    gathering_delimiters: String,
 }
 
 fn get_projects_path() -> PathBuf {
@@ -70,6 +74,10 @@ impl Session {
 
             audio_input: AudioInput::new(),
             audio_output: AudioOutput::new(),
+
+            gathering_choice: String::from("Sentences"),
+            gathering_amount: 4,
+            gathering_delimiters: String::from(".?!"),
         }
     }
 
@@ -152,5 +160,29 @@ impl Session {
 
     pub fn audio_input_mut(&mut self) -> &mut AudioInput {
         &mut self.audio_input
+    }
+
+    pub fn gathering_choice(&self) -> String {
+        self.gathering_choice.clone()
+    }
+
+    pub fn set_gathering_choice(&mut self, gathering_choice: &str) {
+        self.gathering_choice = String::from(gathering_choice);
+    }
+
+    pub fn gathering_amount(&self) -> usize {
+        self.gathering_amount
+    }
+
+    pub fn set_gathering_amount(&mut self, amount: usize) {
+        self.gathering_amount = amount;
+    }
+
+    pub fn gathering_delimiters(&self) -> String {
+        self.gathering_delimiters.clone()
+    }
+
+    pub fn set_gathering_delimiters(&mut self, delimiters: &str) {
+        self.gathering_delimiters = String::from(delimiters);
     }
 }
