@@ -87,25 +87,52 @@ impl ParagraphViewer {
         }
     }
 
-    pub fn load_paragraphs(&mut self, text_file_path: PathBuf) {
+    pub fn load_paragraphs(&mut self, text_file_path: PathBuf, delimiters: &str, amount: usize) {
         let mut text_file = File::open(text_file_path).expect("Could not load file.");
         let mut whole_text_content = String::new();
         text_file
             .read_to_string(&mut whole_text_content)
             .expect("Could not read text file.");
 
+        let delimiter_tokens = delimiters.chars().collect::<Vec<char>>();
         let split_paragraphs: Vec<&str> = whole_text_content
-            .split_inclusive(|character| character == '.' || character == '?' || character == '!')
+            .split_inclusive(&*delimiter_tokens)
             .collect();
 
         self.paragraphs = split_paragraphs
-            .chunks(4)
+            .chunks(amount)
             .map(|sentences| sentences.concat())
             .collect();
 
         self.progress_counter.set_current(0);
         self.progress_counter.set_total(self.paragraphs.len());
         self.progress_counter.update();
+    }
+
+    /// Changes currently loaded text to be split by the provided
+    /// delimiters.
+    pub fn reload_text_with(&mut self, delimiters: &str, amount: usize) {
+        let existing_text = self.paragraphs.join("");
+
+        let delimiter_tokens = delimiters.chars().collect::<Vec<char>>();
+        let new_splitted_text: Vec<&str> =
+            existing_text.split_inclusive(&*delimiter_tokens).collect();
+
+        let new_chunked_text: Vec<String> = new_splitted_text
+            .chunks(amount)
+            .map(|line| line.concat())
+            .collect();
+
+        if new_chunked_text == self.paragraphs {
+            return;
+        }
+
+        self.paragraphs = new_chunked_text;
+
+        self.progress_counter.set_current(0);
+        self.progress_counter.set_total(self.paragraphs.len());
+        self.progress_counter.update();
+        self.show_paragraph_at(0);
     }
 
     pub fn show_next_paragraph(&mut self) {
@@ -183,6 +210,9 @@ mod tests {
     use std::io::Write;
     use tempfile::NamedTempFile;
 
+    const DELIMITERS: &str = ".?!";
+    const GATHERING_AMOUNT: usize = 4;
+
     const FIRST_PARAGRAPH: &str = "This is the first paragraph. It will eventually contain four sentences. I'm serious! Okay, here is the last sentence.";
     const SECOND_PARAGRAPH: &str = "This is the second paragraph. It will also contain four sentences. This paragraph is similar to the first one. It really is?";
 
@@ -246,7 +276,11 @@ mod tests {
     #[test]
     fn goto_exceeds_paragraphs() {
         let mut paragraph_viewer = get_paragraph_viewer();
-        paragraph_viewer.load_paragraphs(get_file_many_paragraphs().path().to_path_buf());
+        paragraph_viewer.load_paragraphs(
+            get_file_many_paragraphs().path().to_path_buf(),
+            DELIMITERS,
+            GATHERING_AMOUNT,
+        );
         assert_eq!(MANY_PARAGRAPHS_LEN, paragraph_viewer.num_paragraphs());
 
         let goto_paragraph_num = 3;
@@ -260,7 +294,11 @@ mod tests {
     #[test]
     fn goto_paragraph_exists() {
         let mut paragraph_viewer = get_paragraph_viewer();
-        paragraph_viewer.load_paragraphs(get_file_many_paragraphs().path().to_path_buf());
+        paragraph_viewer.load_paragraphs(
+            get_file_many_paragraphs().path().to_path_buf(),
+            DELIMITERS,
+            GATHERING_AMOUNT,
+        );
         assert_eq!(MANY_PARAGRAPHS_LEN, paragraph_viewer.num_paragraphs());
 
         let goto_paragraph_num = 1;
@@ -291,7 +329,11 @@ mod tests {
     #[test]
     fn next_exceeds_paragraphs() {
         let mut paragraph_viewer = get_paragraph_viewer();
-        paragraph_viewer.load_paragraphs(get_file_one_paragraph().path().to_path_buf());
+        paragraph_viewer.load_paragraphs(
+            get_file_one_paragraph().path().to_path_buf(),
+            DELIMITERS,
+            GATHERING_AMOUNT,
+        );
         assert_eq!(1, paragraph_viewer.num_paragraphs());
 
         paragraph_viewer.show_paragraph_at(0);
@@ -308,7 +350,11 @@ mod tests {
     #[test]
     fn next_paragraph_exists() {
         let mut paragraph_viewer = get_paragraph_viewer();
-        paragraph_viewer.load_paragraphs(get_file_many_paragraphs().path().to_path_buf());
+        paragraph_viewer.load_paragraphs(
+            get_file_many_paragraphs().path().to_path_buf(),
+            DELIMITERS,
+            GATHERING_AMOUNT,
+        );
         assert_eq!(MANY_PARAGRAPHS_LEN, paragraph_viewer.num_paragraphs());
 
         paragraph_viewer.show_paragraph_at(0);
@@ -341,7 +387,11 @@ mod tests {
     #[test]
     fn previous_negative_paragraphs() {
         let mut paragraph_viewer = get_paragraph_viewer();
-        paragraph_viewer.load_paragraphs(get_file_one_paragraph().path().to_path_buf());
+        paragraph_viewer.load_paragraphs(
+            get_file_one_paragraph().path().to_path_buf(),
+            DELIMITERS,
+            GATHERING_AMOUNT,
+        );
         assert_eq!(1, paragraph_viewer.num_paragraphs());
 
         paragraph_viewer.show_paragraph_at(0);
@@ -358,7 +408,11 @@ mod tests {
     #[test]
     fn previous_paragraph_exists() {
         let mut paragraph_viewer = get_paragraph_viewer();
-        paragraph_viewer.load_paragraphs(get_file_many_paragraphs().path().to_path_buf());
+        paragraph_viewer.load_paragraphs(
+            get_file_many_paragraphs().path().to_path_buf(),
+            DELIMITERS,
+            GATHERING_AMOUNT,
+        );
         assert_eq!(MANY_PARAGRAPHS_LEN, paragraph_viewer.num_paragraphs());
 
         paragraph_viewer.show_paragraph_at(MANY_PARAGRAPHS_LEN - 1);
@@ -379,7 +433,11 @@ mod tests {
     #[test]
     fn shows_paragraph() {
         let mut paragraph_viewer = get_paragraph_viewer();
-        paragraph_viewer.load_paragraphs(get_file_one_paragraph().path().to_path_buf());
+        paragraph_viewer.load_paragraphs(
+            get_file_one_paragraph().path().to_path_buf(),
+            DELIMITERS,
+            GATHERING_AMOUNT,
+        );
         assert_eq!(1, paragraph_viewer.num_paragraphs());
 
         paragraph_viewer.show_paragraph_at(0);

@@ -1,6 +1,6 @@
 [package]
 name = "narrative-director-rs"
-version = "0.1.2"
+version = "1.0.0"
 authors = ["Tyler Schmidt <tmschmid@protonmail.com>"]
 edition = "2021"
 license = "gpl-3.0"

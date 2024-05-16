@@ -4,9 +4,10 @@
 - This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - This project uses [ISO Standard](https://www.iso.org/iso-8601-date-and-time-format.html) date formatting
 
-## Unreleased
+## [1.0.0] - 2024-05-16
 ### Added
 - Wayland support.
+- Text Extraction Preferences.
 
 ### Changed
 - Updated FLTK and various developer dependencies.

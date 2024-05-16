@@ -165,7 +165,11 @@ impl MainApplication {
         let session = Session::load(file_location.clone())
             .unwrap_or_else(|| Session::new(file_location.clone()));
 
-        self.paragraph_viewer.load_paragraphs(file_location);
+        self.paragraph_viewer.load_paragraphs(
+            file_location,
+            &session.gathering_delimiters(),
+            session.gathering_amount(),
+        );
         self.paragraph_viewer
             .show_paragraph_at(session.paragraph_num());
 
@@ -228,13 +232,13 @@ impl MainApplication {
                         // TODO: Split session into AudioPreferences, TextPreferences, and Session.
                         // That way, users can use the Preferences dialog without needing an existing
                         // session open.
-                        if self.session.is_some() {
-                            self.preferences_dialog.show(
-                                self.session.as_mut().expect(
-                                    "Session is needed to fetch current audio information.",
-                                ),
-                            );
+                        if let Some(session) = self.session.as_mut() {
+                            self.preferences_dialog.show(session);
 
+                            self.paragraph_viewer.reload_text_with(
+                                &session.gathering_delimiters(),
+                                session.gathering_amount(),
+                            );
                             self.load_audio_file();
                         }
                     }
