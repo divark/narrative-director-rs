@@ -28,7 +28,9 @@ jobs:
             libpango1.0-dev \
             libgl1-mesa-dev \
             libglu1-mesa-dev \
-            libasound2-dev
+            libasound2-dev \
+            libwayland-dev \
+            libxkbcommon-dev
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable

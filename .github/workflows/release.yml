@@ -84,7 +84,9 @@ jobs:
               libglu1-mesa-dev \
               libasound2-dev \
               pkg-config \
-              libudev-dev
+              libudev-dev \
+              libwayland-dev \
+              libxkbcommon-dev
       - name: Build release
         run: |
           cargo build --release

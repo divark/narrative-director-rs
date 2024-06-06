@@ -7,6 +7,7 @@
 ## [1.0.1]
 ### Fixed
 - Minutes and Hours now displaying properly.
+- Linux release lacking wayland library.
 
 ## [1.0.0] - 2024-05-16
 ### Added
