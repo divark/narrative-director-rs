@@ -31,7 +31,7 @@ jobs:
             libasound2-dev \
             libwayland-dev \
             libxkbcommon-dev \
-            libdbus-1
+            libdbus-1-dev
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
