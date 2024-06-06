@@ -4,6 +4,10 @@
 - This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - This project uses [ISO Standard](https://www.iso.org/iso-8601-date-and-time-format.html) date formatting
 
+## [1.0.1]
+### Fixed
+- Minutes and Hours now displaying properly.
+
 ## [1.0.0] - 2024-05-16
 ### Added
 - Wayland support.
@@ -81,6 +85,8 @@
 - Unit Testing in GitHub Workflow files, temporarily.
 
 [Unreleased]: https://github.com/divark/narrative-director-rs/blob/main/CHANGELOG.md
+[1.0.1]: https://github.com/divark/narrative-director-rs/releases/tag/v1.0.1
+[1.0.0]: https://github.com/divark/narrative-director-rs/releases/tag/v1.0.0
 [0.1.2]: https://github.com/divark/narrative-director-rs/releases/tag/v0.1.2
 [0.1.1]: https://github.com/divark/narrative-director-rs/releases/tag/v0.1.1
 [0.1.0]: https://github.com/divark/narrative-director-rs/releases/tag/v0.1.0
