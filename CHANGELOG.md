@@ -4,6 +4,10 @@
 - This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - This project uses [ISO Standard](https://www.iso.org/iso-8601-date-and-time-format.html) date formatting
 
+## [1.0.3]
+### Fixed
+- Linux release dependency libdbus-1 missing -dev.
+
 ## [1.0.2]
 ### Fixed
 - Linux release lacking libdbus-1.
@@ -90,6 +94,7 @@
 - Unit Testing in GitHub Workflow files, temporarily.
 
 [Unreleased]: https://github.com/divark/narrative-director-rs/blob/main/CHANGELOG.md
+[1.0.3]: https://github.com/divark/narrative-director-rs/releases/tag/v1.0.3
 [1.0.2]: https://github.com/divark/narrative-director-rs/releases/tag/v1.0.2
 [1.0.1]: https://github.com/divark/narrative-director-rs/releases/tag/v1.0.1
 [1.0.0]: https://github.com/divark/narrative-director-rs/releases/tag/v1.0.0
